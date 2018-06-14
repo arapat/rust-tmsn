@@ -49,6 +49,7 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// use rust_tmsn::network::start_network;
 ///
 /// use std::time::Duration;
+///
 /// // Remote data queue, where the data received from network would be put
 /// let (remote_data_send, remote_data_recv) = mpsc::channel();
 /// // Local data queue, where the data generated locally would be put
