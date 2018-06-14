@@ -31,21 +31,22 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// Its initial neighbors are specified in `init_remote_ips`, which is a vector of IP addresses or URLs.
 /// All computers listen to the port `port` to receive packages from other computers.
 ///
-/// The model received from remote computers would be sent out using the channel `model_send`.
-/// Meanwhile, the local models are received from the channel `model_recv`, and sent out
+/// The model received from remote computers would be sent out using the channel `data_remote`.
+/// Meanwhile, the local models are received from the channel `data_local`, and sent out
 /// to the neighbor of this machine.
 ///
 /// The full workflow is described in the following plot.
 ///
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: String, init_remote_ips: &Vec<String>, port: u16,
-        model_send: Sender<T>, model_recv: Receiver<T>) {
+        name: &str, init_remote_ips: &Vec<String>, port: u16,
+        data_remote: Sender<T>, data_local: Receiver<T>) {
+    info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
-    start_sender(name.clone(), port, model_recv, ip_send.clone());
+    start_sender(name.to_string(), port, data_local, ip_send.clone());
     // receiver initiates remote connections
-    start_receiver(name, port, model_send, ip_recv);
+    start_receiver(name.to_string(), port, data_remote, ip_recv);
 
     init_remote_ips.iter().for_each(|ip| {
         let socket_addr: SocketAddr =
