@@ -1,6 +1,6 @@
 /*!
 RustTMSN is a collection of general modules to help implementing TMSN
-for various learning.
+for various learning algorithms.
 
 ## Use rust_tmsn with Cargo
 
@@ -12,8 +12,6 @@ with the path should be the actual location of RustTMSN.
 [dependencies]
 rust_tmsn = { path = "../rust-tmsn" }
 ```
-
-
 */
 #[macro_use] extern crate log;
 extern crate bufstream;
