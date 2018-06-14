@@ -8,13 +8,13 @@ use std::time::Duration;
 
 
 fn main() {
-    // Remote data queue, where the data received from network would be put
+    // Remote data queue, where the data received from network would be put in
     let (remote_data_send, remote_data_recv) = mpsc::channel();
-    // Local data queue, where the data generated locally would be put
+    // Local data queue, where the data generated locally would be put in
     let (local_data_send, local_data_recv) = mpsc::channel();
 
     let network = vec![String::from("127.0.0.1")];
-    start_network("local", &network, 8000, remote_data_send, local_data_recv);
+    start_network("local", &network, 8000, false, remote_data_send, local_data_recv);
 
     // Put a test message in the local_data 
     let message = String::from("Hello, this is a test message.");

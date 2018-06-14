@@ -28,23 +28,80 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 ///
 /// The local computer name is specified using `name`.
 /// The name here is only used for the debug purpose.
-/// Its initial neighbors are specified in `init_remote_ips`, which is a vector of IP addresses or URLs.
+///
+/// Initially, the local computer establishes TCP connections to all computers specified
+/// in `init_remote_ips` (neighbors), and *receive* data from them.
+/// If `is_two_way` is set to `false`, the connections are one-way, thus the neighbors are
+/// not necessarily receiving data from the local computer (unless this computer is in their `init_remote_ips` parameter).
+/// If `is_two_way` is set to `true`, the connections are two-way, i.e. the local computer
+/// will also send its data to its neighbors from whom it receives data from.
+///
 /// All computers listen to the port `port` to receive packages from other computers.
 ///
 /// The model received from remote computers would be sent out using the channel `data_remote`.
 /// Meanwhile, the local models are received from the channel `data_local`, and sent out
 /// to the neighbor of this machine.
 ///
-/// The full workflow is described in the following plot.
+/// ## Example
+/// ```
+/// use std::sync::mpsc;
+/// use std::thread::sleep;
+/// use rust_tmsn::network::start_network;
+///
+/// use std::time::Duration;
+/// // Remote data queue, where the data received from network would be put
+/// let (remote_data_send, remote_data_recv) = mpsc::channel();
+/// // Local data queue, where the data generated locally would be put
+/// let (local_data_send, local_data_recv) = mpsc::channel();
+///
+/// let network = vec![String::from("127.0.0.1")];
+/// start_network("local", &network, 8000, remote_data_send, local_data_recv);
+///
+/// // Put a test message in the local_data
+/// let message = String::from("Hello, this is a test message.");
+/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+/// local_data_send.send(message.clone()).unwrap();
+/// println!("Sent out this message: {}", message);
+///
+/// // The message above is supposed to send out to all the neighbors computers specified
+/// // in the `network` vector, which contains only the localhost.
+/// // The network module running on the local host should have received the message
+/// // and put it into the remote data queue.
+/// let data_received = remote_data_recv.recv().unwrap();
+/// assert_eq!(data_received, message);
+/// ```
+///
+/// ## Design
+///
+/// Initially, the local computer only connects to the computers specificed by the
+/// `init_remote_ips` vector in the function parameters (neighbors), and *receive* data from
+/// these computers.
+/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the 
+/// Receiver. The number of Receivers on a computer is always equal to the number of neighbors.
+/// On the other end, only one **Sender** is created for a computer, which send data to all other
+/// computers that connected to it.
+///
+/// If `is_two_way` is set to `true`, for any remote computer B connected to the Sender on
+/// the computer A, a new Receiver would also be created on A so that the connection between these
+/// two computers are two-way.
+/// If it is set to `false`, the Sender would only send local data to the remote computer (A -> B),
+/// but it is possible that the remote computer might not send data to the local computer (B -> A),
+/// since a corresponding receiver to the computer B might not exist on the computer A.
+///
+/// The full workflow of the network module is described in the following plot.
 ///
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, init_remote_ips: &Vec<String>, port: u16,
-        data_remote: Sender<T>, data_local: Receiver<T>) {
+        is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>) {
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
-    start_sender(name.to_string(), port, data_local, ip_send.clone());
+    if is_two_way {
+        start_sender(name.to_string(), port, data_local, Some(ip_send.clone()));
+    } else {
+        start_sender(name.to_string(), port, data_local, None);
+    }
     // receiver initiates remote connections
     start_receiver(name.to_string(), port, data_remote, ip_recv);
 
@@ -61,7 +118,8 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
 
 
 fn start_sender<T: 'static + Send + Serialize>(
-        name: String, port: u16, model_recv: Receiver<T>, remote_ip_send: Sender<SocketAddr>) {
+        name: String, port: u16, model_recv: Receiver<T>,
+        remote_ip_send: Option<Sender<SocketAddr>>) {
     let streams: Vec<BufStream<TcpStream>> = vec![];
     let streams_arc = Arc::new(RwLock::new(streams));
 
@@ -72,7 +130,7 @@ fn start_sender<T: 'static + Send + Serialize>(
         sender_listener(name_clone, port, arc_w, remote_ip_send);
     });
 
-    // Actually sending out models to the remote connections established so far
+    // Send local data to the remote connections accepted so far
     spawn(move|| {
         sender(name, streams_arc, model_recv);
     });
@@ -91,7 +149,7 @@ fn sender_listener(
         name: String,
         port: u16,
         sender_streams: StreamLockVec,
-        receiver_ips: Sender<SocketAddr>) {
+        receiver_ips: Option<Sender<SocketAddr>>) {
     // Sender listener is responsible for:
     //     1. Add new incoming stream to sender (via streams RwLock)
     //     2. Send new incoming address to receiver so that it connects to the new machine
@@ -120,9 +178,11 @@ fn sender_listener(
                     lock_w.push(BufStream::new(stream));
                 }
                 info!("Remote server {} will receive our model from now on.", remote_addr);
-                receiver_ips.send(remote_addr.clone()).expect(
-                    "Cannot send the received IP to the channel."
-                );
+                if let Some(ref receivers) = receiver_ips {
+                    receivers.send(remote_addr.clone()).expect(
+                        "Cannot send the received IP to the channel."
+                    );
+                }
                 info!("Remote server {} will be subscribed soon (if not already).", remote_addr);
             }
         }
@@ -134,10 +194,7 @@ fn receivers_launcher<T: 'static + Send + DeserializeOwned>(
         name: String, port: u16, model_send: Sender<T>, remote_ip_recv: Receiver<SocketAddr>) {
     info!("now entering receivers listener");
     let mut receivers = HashSet::new();
-    loop {
-        let mut remote_addr = remote_ip_recv.recv().expect(
-            "Failed to unwrap the received remote IP."
-        );
+    while let Ok(mut remote_addr) = remote_ip_recv.recv() {
         remote_addr.set_port(port);
         if !receivers.contains(&remote_addr) {
             let name_clone = name.clone();
