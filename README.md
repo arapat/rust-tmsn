@@ -13,3 +13,8 @@ with the path should be the actual location of RustTMSN.
 [dependencies]
 rust_tmsn = { path = "../rust-tmsn" }
 ```
+
+## Managing a cluster on AWS
+
+Helper scripts are provided in the `scripts/` directory for managing a cluster
+on Amazon Web Services and starting the TMSN code over multiple instances in parallel.
