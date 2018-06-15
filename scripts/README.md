@@ -1,6 +1,6 @@
 ## Install dependencies
 
-Run `pip install -r requirements.txt` to intall the required python packages.
+Run `pip install -r requirements.txt` to install the required python packages.
 
 
 ## Create a new cluster
@@ -26,12 +26,25 @@ Run `pip install -r requirements.txt` to intall the required python packages.
 
 ## Terminate a cluster
 
-`terminate-cluster.py` terminates a cluster by stopping terminating all instances in this cluster.
+`terminate-cluster.py` terminates a cluster by stopping and terminating all instances
+in this cluster.
 
 ### Example
 ```bash
 ./terminate-cluster.py --name testing
 ```
 
-* `init-single_worker.sh`: start up script for single node.
-* `setup-cluster.sh`: script for setting up a cluster of multiple workers, the IPs of the workers are provided in the `neighbors.txt` file.
+
+## Run a script on a cluster
+
+`run-cluster.py` runs a given script on all instances in the cluster.
+It starts the script in the background, and redirect the stdout/stderr
+into a file on the instances which can be checked later.
+Thus it terminates does not necessarily mean the script has finshed executing on the cluster.
+In addition, it only launches the script on all instances, but does _not_ check if the script
+executes without error.
+
+### Example
+```bash
+./run-cluster.py -k ./ec2-key-pair.pem --script ./run-on-workers/hello-world.sh
+```
