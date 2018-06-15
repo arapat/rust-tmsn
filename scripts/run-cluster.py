@@ -38,7 +38,7 @@ def main(args):
     base_path = args["base_path"]
     fullpath, filename = parse_file_path(args["script"])
     remote_file_path = os.path.join(base_path, filename)
-    log_path = os.path.join(base_path, "run.log")
+    log_path = "/tmp/run.log"
     for url in instances:
         print("Running on '{}'".format(url))
 

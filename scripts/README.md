@@ -46,5 +46,5 @@ executes without error.
 
 ### Example
 ```bash
-./run-cluster.py -k ./ec2-key-pair.pem --script ./run-on-workers/hello-world.sh
+./run-cluster.py -k ./ec2-key-pair.pem --script ./script-examples/hello-world.sh
 ```

@@ -3,7 +3,7 @@
 RustTMSN is a collection of general modules to help implementing TMSN
 for various learning algorithms.
 
-## Use rust_tmsn with Cargo
+## Use `rust_tmsn` with Cargo
 
 Please download the source code of RustTMSN to your computer, and
 append following lines to the `Cargo.toml` file in your project
