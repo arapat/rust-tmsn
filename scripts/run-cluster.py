@@ -38,6 +38,7 @@ def main(args):
     base_path = args["base_path"]
     fullpath, filename = parse_file_path(args["script"])
     remote_file_path = os.path.join(base_path, filename)
+    run_in_foreground = args["output"]
     log_path = "/tmp/run.log"
     for url in instances:
         print("Running on '{}'".format(url))
@@ -57,16 +58,21 @@ def main(args):
                     "\"sudo chmod u+x {}\";").format(key, url, remote_file_path)
         # Execute the script
         command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
-                    "\"{} > {} 2>&1 < /dev/null\"").format(key, url, remote_file_path, log_path)
+                    "").format(key, url)
+        if run_in_foreground:
+            command += "\" {} \"".format(remote_file_path)
+        else:
+            command += "\"{} > {} 2>&1 < /dev/null\"".format(remote_file_path, log_path)
+            command = "({}) &".format(command)
 
-        command_in_background = "({}) &".format(command)
-        subprocess.run(command_in_background, shell=True, check=True)
+        subprocess.run(command, shell=True, check=True)
 
-    print("\nThe script '{}' has been started on all instances. "
-          "Note that we don't check if the script is launched successfully "
-          "or is finished.\n"
-          "The stdout/stderr from the script has been redirected to the file {} "
-          "on the remote instance".format(fullpath, log_path))
+    if not run_in_foreground:
+        print("\nThe script '{}' has been started in the background on all instances. "
+            "Note that we don't check if the script is launched successfully "
+            "or is finished.\n"
+            "The stdout/stderr of the script has been redirected to the file {} "
+            "on the remote instance".format(fullpath, log_path))
 
 
 if __name__ == '__main__':
@@ -81,6 +87,12 @@ if __name__ == '__main__':
                         nargs='+',
                         help=("File path of the file that needs to be sent to the instances. "
                                 "For multiple files, separate them using spaces."))
+    parser.add_argument("--output",
+                        action="store_true",
+                        help=("If set, wait till the script exits on the instances and print its "
+                              "output to the commandline. Otherwise, run the script in the "
+                              "background and redirect the stdout/stderr of the script to "
+                              "a log file on the instance."))
     args = vars(parser.parse_args())
     args["neighbors"] = "./neighbors.txt"
     args["base_path"] = "/home/ubuntu/workspace"
