@@ -40,9 +40,7 @@ def main(args):
     remote_file_path = os.path.join(base_path, filename)
     run_in_foreground = args["output"]
     log_path = "/tmp/run.log"
-    for url in instances:
-        print("Running on '{}'".format(url))
-
+    for idx, url in enumerate(instances):
         # Create base path
         command = ("ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
                    "\"mkdir -p {}\";").format(key, url, base_path)
@@ -50,21 +48,26 @@ def main(args):
         for filepath in args["files"]:
             command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
                         ";").format(key, filepath, url, base_path)
-        # Send the script
-        command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
-                    ";").format(key, fullpath, url, base_path)
-        # Make it runnable
-        command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
-                    "\"sudo chmod u+x {}\";").format(key, url, remote_file_path)
+        # Send the script and make it runnable
+        if not run_in_foreground:
+            command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
+                        ";").format(key, fullpath, url, base_path)
+            command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
+                        "\"sudo chmod u+x {}\";").format(key, url, remote_file_path)
         # Execute the script
         command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
                     "").format(key, url)
         if run_in_foreground:
-            command += "\" {} \"".format(remote_file_path)
+            with open(fullpath) as f:
+                command += "\" {} \"".format(f.read())
         else:
             command += "\"{} > {} 2>&1 < /dev/null\"".format(remote_file_path, log_path)
-            command = "({}) &".format(command)
+            if idx + 1 < len(instances):
+                command = "({}) &".format(command)
 
+        if run_in_foreground:
+            print()
+        print("Running on '{}'".format(url))
         subprocess.run(command, shell=True, check=True)
 
     if not run_in_foreground:

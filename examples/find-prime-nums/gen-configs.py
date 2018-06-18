@@ -20,6 +20,7 @@ def main(args):
     for i in range(k):
         right = min(n, left + ceil(1.0 * n / k))
         config = {
+            "id": i,
             "left": left,
             "right": right
         }

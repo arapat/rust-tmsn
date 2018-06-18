@@ -3,4 +3,4 @@
 cd /home/ubuntu/workspace/rust-tmsn
 git pull
 cargo build --release
-cargo run ---example find-prime-nums
+cargo run --example find-prime-nums
