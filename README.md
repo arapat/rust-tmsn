@@ -1,7 +1,11 @@
 # rust-tmsn
 
 RustTMSN is a collection of general modules to help implementing TMSN
-for various learning algorithms.
+for various learning algorithms. For now it contains 2 components:
+
+1. a `network` module in Rust (which is documented in `/doc/rust_tmsn`),
+2. Python scripts for launching a cluster on Amazon Web Services to run a TMSN application
+(which is documented in `/scripts/README.md`).
 
 ## Try out the examples
 
