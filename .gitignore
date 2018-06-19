@@ -5,3 +5,5 @@ Cargo.lock
 
 neighbors.txt
 example-configs
+
+_*

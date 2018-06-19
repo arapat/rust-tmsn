@@ -69,8 +69,8 @@ in this example, and launch this script on all instances using the `run-cluster.
 Once all instances finished running, we can retrieve the output files from them.
 
 ```bash
-../../scripts/retrieve-files.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --remote /home/ubuntu/workspace/rust-tmsn/primes.txt --local ./result/
+../../scripts/retrieve-files.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --remote /home/ubuntu/workspace/rust-tmsn/primes.txt --local ./_result/
 ```
 
-The script will create a sub-directory in `./result` for every worker, and download the files from the workers
+The script will create a sub-directory in `./_result` for every worker, and download the files from the workers
 to corresponding sub-directories.

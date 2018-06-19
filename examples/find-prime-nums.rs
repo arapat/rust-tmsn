@@ -12,6 +12,7 @@ use time::get_time;
 
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 
@@ -23,6 +24,25 @@ struct Config {
     id: u32,
     left: u32,
     right: u32
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Message {
+    message_type: String,
+    from: u32,
+    data: u32
+}
+
+
+impl Message {
+    fn new(message_type: &str, worker_id: u32, data: u32) -> Message {
+        Message {
+            message_type: String::from(message_type),
+            from: worker_id,
+            data: data
+        }
+    }
 }
 
 
@@ -45,7 +65,7 @@ fn main() {
     let remote_base_dir = String::from("/home/ubuntu/workspace/");
     // Load config file
     let mut f = File::open(remote_base_dir.clone() + "configuration")
-                    .expect("Config file not found.");
+                     .expect("Config file not found.");
     let mut json = String::new();
     f.read_to_string(&mut json)
      .expect("Error: cannot read the configuration file.");
@@ -70,54 +90,70 @@ fn main() {
     }
 
     // Remote data queue, where the data received from network would be put in
-    let (remote_data_send, remote_data_recv) = mpsc::channel();
+    let (remote_data_send, remote_data_recv): (Sender<Message>, Receiver<Message>) = mpsc::channel();
     // Local data queue, where the data generated locally would be put in
     let (local_data_send, local_data_recv) = mpsc::channel();
     start_network("local", &neighbors, 8000, false, remote_data_send, local_data_recv);
 
-    // Wait for all computers to be online
-    let mut up_workers = vec![false; neighbors.len()];
-    let mut num_workers_up = 0;
-    let mut num_workers_down = 0;
+    // Discover stage:
+    //   Workers broadcast how many workers they can currently receive message from (discover).
+    //   Once it discover all other workers, it is _ready_.
+    //
+    // Searching stage:
+    //   If a worker knows that all workers are ready (can receive message from all other workers),
+    //   it starts scanning and sending all prime numbers in its range.
+    //
+    // Finished stage:
+    //   After the searching is done, it broadcasts a "_finish_" signal.
+    let mut worker_discover = vec![0; neighbors.len()];
+    let mut num_discovered = 0;
+    let mut num_workers_ready = 0;
+    let mut num_workers_finish = 0;
+
     // Vectors to store all prime numbers received from network
     let mut all_primes: Vec<u32> = vec![];
 
-    // Workers send a number `1` when they are up;
-    // then start sending all prime numbers they found;
-    // finally send a number `0` before terminating
-    //
-    // The worker start the thread that actually search for
-    // the prime numbers after it receives the "up" signals (the number `1`)
-    // from all workers.
-    //
-    // After that, it keeps listening to the network until
-    // it receives "down" signals (the number `0`) from all workers.
-    while num_workers_up < neighbors.len() || num_workers_down < neighbors.len() {
-        println!("status, {}, {}", num_workers_up, num_workers_down);
-        if let Ok((machine_id, num)) = remote_data_recv.try_recv() {
-            println!("received, {}, {}", machine_id, num);
-            if num != 0 && num != 1 {
-                // if the incoming number is neither "up" nor "down" signals
-                // then it is the prime number found by other machines
-                all_primes.push(num);
-            } else if num == 0 {
-                // a worker is stopped
-                num_workers_down += 1;
-            }
-            if up_workers[machine_id as usize] == false {
-                // a new (unseen) worker is up
-                up_workers[machine_id as usize] = true;
-                num_workers_up += 1;
-                // if all workers are up, start search and broadcast prime numbers
-                if num_workers_up == neighbors.len() {
-                    start_search(worker_id, left, right, local_data_send.clone());
+    // Exit condition:
+    //   Once all workers broadcasted the "finish" signals, the program can exit.
+    while num_workers_finish < neighbors.len() {
+        println!("status, {}, {}, {}", num_discovered, num_workers_ready, num_workers_finish);
+        if let Ok(message) = remote_data_recv.try_recv() {
+            println!("received, {:?}", message);
+            let message_type = message.message_type;
+            let machine_id = message.from as usize;
+            let data = message.data;
+            match message_type.as_ref() {
+                "discover" => {
+                    if worker_discover[machine_id] == 0 {
+                        // a new (unseen) worker is ready
+                        num_discovered += 1;
+                    }
+                    if worker_discover[machine_id] < data && data as usize == neighbors.len() {
+                        num_workers_ready += 1;
+                        // if all workers are ready, start search and broadcast prime numbers
+                        if num_workers_ready == neighbors.len() {
+                            start_search(worker_id, left, right, local_data_send.clone());
+                        }
+                    }
+                    worker_discover[machine_id] = data;
+                },
+                "searching" => {
+                    all_primes.push(data);
+                },
+                "finish" => {
+                    num_workers_finish += 1;
+                },
+                _ => {
+                    println!("Error: Received an undefined message")
                 }
             }
         }
-        // if not all workers are up, keep sending some signals
+        // if not all workers are ready, keep sending some signals
         // so that new workers can see this worker
-        if num_workers_up < neighbors.len() {
-            local_data_send.send((worker_id, 1)).unwrap();
+        if num_workers_ready < neighbors.len() {
+            local_data_send.send(
+                Message::new("discover", worker_id, num_discovered)
+            ).unwrap();
             sleep(Duration::from_millis(500));
         }
     }
@@ -133,7 +169,7 @@ fn main() {
 
 // Start searching and broadcasting prime numbers in [left, right)
 // in a separate thread
-fn start_search(worker_id: u32, left: u32, right: u32, local_data_send: Sender<(u32, u32)>) {
+fn start_search(worker_id: u32, left: u32, right: u32, local_data_send: Sender<Message>) {
     spawn(move|| {
         for num in left..right {
             let mut is_prime = true;
@@ -146,10 +182,14 @@ fn start_search(worker_id: u32, left: u32, right: u32, local_data_send: Sender<(
             }
             if num > 1 && is_prime {
                 // Found a non-prime number, broadcast to network
-                local_data_send.send((worker_id.clone(), num)).unwrap();
+                local_data_send.send(
+                    Message::new("searching", worker_id, num)
+                ).unwrap();
             }
         }
         // Broadcast 0 when the searching is done
-        local_data_send.send((worker_id, 0)).unwrap();
+        local_data_send.send(
+            Message::new("finish", worker_id, 0)
+        ).unwrap();
     });
 }
