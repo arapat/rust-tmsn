@@ -1,11 +1,14 @@
 #[macro_use] extern crate serde_derive;
+extern crate env_logger;
 extern crate rust_tmsn;
 extern crate serde_json;
+extern crate time;
 
 use std::io::prelude::*;
 use std::sync::mpsc;
 use std::thread::sleep;
 use std::thread::spawn;
+use time::get_time;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -24,8 +27,22 @@ struct Config {
 
 
 fn main() {
-    let remote_base_dir = String::from("/home/ubuntu/workspace/");
+    // set logger
+    let base_timestamp = get_time().sec;
+    env_logger::Builder
+              ::from_default_env()
+              .format(move|buf, record| {
+                  let timestamp = get_time();
+                  let epoch_since_apr18: i64 = timestamp.sec - base_timestamp;
+                  let formatted_ts = format!("{}.{:09}", epoch_since_apr18, timestamp.nsec);
+                  writeln!(
+                      buf, "{}, {}, {}, {}",
+                      record.level(), formatted_ts, record.module_path().unwrap(), record.args()
+                  )
+              })
+              .init();
 
+    let remote_base_dir = String::from("/home/ubuntu/workspace/");
     // Load config file
     let mut f = File::open(remote_base_dir.clone() + "configuration")
                     .expect("Config file not found.");
