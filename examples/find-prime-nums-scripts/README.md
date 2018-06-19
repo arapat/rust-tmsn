@@ -64,7 +64,7 @@ in this example, and launch this script on all instances using the `run-cluster.
 ../../scripts/run-cluster.py --script ./check-prog-status.sh --output
 ```
 
-### Step 6: Retrieve output files from the instances
+### Step 6a: Retrieve output files from the instances
 
 Once all instances finished running, we can retrieve the output files from them.
 
@@ -74,6 +74,17 @@ Once all instances finished running, we can retrieve the output files from them.
 
 The script will create a sub-directory in `./_result` for every worker, and download the files from the workers
 to corresponding sub-directories.
+
+
+### Step 6b: Retrieve log files from the instances
+
+We can also retrieve the log files from the instances.
+
+```bash
+../../scripts/retrieve-files.py --remote /tmp/run.log --local ./_logs
+```
+
+The logs should be downloaded to `./_logs` directory.
 
 
 ### Step 7: Terminate the cluster
