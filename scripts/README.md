@@ -11,6 +11,8 @@ The scripts in this repository requires a `credentials.yml` file in following fo
 Arbitrary Name:
   access_key_id: your_aws_access_key_id
   secret_access_key: your_aws_secret_access_key
+  key_name: your_ec2_key_pair_name
+  ssh_key: /path/to/the/ec2/key/pair/file
 ```
 
 The credential file in the Spark Notebook project can be directly used here.
@@ -64,7 +66,7 @@ executes without error.
 
 ### Example
 ```bash
-./run-cluster.py -k ./ec2-key-pair.pem --script ./script-examples/hello-world.sh
+./run-cluster.py --script ./script-examples/hello-world.sh
 ```
 
 
@@ -83,7 +85,7 @@ configuration files, one for each worker, and save all configuration files in th
 (e.g. `./example-configs/`). After that, run following command
 
 ```bash
-./send-configs.py -k ./ec2-key-pair.pem --config ./example-configs/
+./send-configs.py --config ./example-configs/
 ```
 
 
@@ -97,5 +99,5 @@ to this sub-directory.
 
 ### Example
 ```bash
-./retrieve-files.py -k ./ec2-key-pair.pem --remote /home/ubuntu/workspace/rust-tmsn/output.txt --local ./_result/
+./retrieve-files.py --remote /home/ubuntu/workspace/rust-tmsn/output.txt --local ./_result/
 ```

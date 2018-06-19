@@ -2,6 +2,7 @@
 import argparse
 import os
 import subprocess
+import yaml
 
 
 def check_exists(path):
@@ -82,9 +83,6 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--script",
                         required=True,
                         help="File path of the script that needs to run on the cluster")
-    parser.add_argument("-k", "--key",
-                        required=True,
-                        help="File path of the EC2 key pair file")
     parser.add_argument("--files",
                         nargs='+',
                         help=("File path of the file that needs to be sent to the instances. "
@@ -95,7 +93,14 @@ if __name__ == '__main__':
                               "output to the commandline. Otherwise, run the script in the "
                               "background and redirect the stdout/stderr of the script to "
                               "a log file on the instance."))
+    # parser.add_argument("-k", "--key",
+    #                     required=True,
+    #                     help="File path of the EC2 key pair file")
     args = vars(parser.parse_args())
     args["neighbors"] = "./neighbors.txt"
     args["base_path"] = "/home/ubuntu/workspace"
+    with open("credentials.yml") as f:
+        creds = yaml.load(f)
+        creds = list(creds.values())[0]
+        args["key"] = creds["ssh_key"]
     main(args)

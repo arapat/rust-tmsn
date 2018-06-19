@@ -36,12 +36,12 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--count",
                         required=True,
                         help="the number of instances in the cluster")
-    parser.add_argument("-k", "--key",
-                        required=True,
-                        help="the EC2 key pair name for creating the instances")
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")
+    # parser.add_argument("-k", "--key",
+    #                     required=True,
+    #                     help="the EC2 key pair name for creating the instances")
     # parser.add_argument("-t", "--type",
     #                     required=True,
     #                     help="the type of the instances")
@@ -51,6 +51,7 @@ if __name__ == '__main__':
     with open("credentials.yml") as f:
         creds = yaml.load(f)
         creds = list(creds.values())[0]
+        args["key"] = creds["key_name"]
         args["aws_access_key_id"] = creds["access_key_id"]
         args["aws_secret_access_key"] = creds["secret_access_key"]
     main(args)
