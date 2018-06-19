@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import subprocess
+import yaml
 
 
 def main(args):
     create_command = """
+    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
     aws ec2 run-instances \
         --image-id {} \
         --count {} \
@@ -18,6 +20,8 @@ def main(args):
               {{\"DeviceName\":\"/dev/xvdc\",\"VirtualName\":\"ephemeral1\"}}]' \
         --no-dry-run
     """.format(
+        args["aws_access_key_id"],
+        args["aws_secret_access_key"],
         args["ami"],
         args["count"],
         args["type"],
@@ -44,4 +48,9 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     args["ami"] = "ami-a4dc46db"
     args["type"] = "m3.xlarge"
+    with open("credentials.yml") as f:
+        creds = yaml.load(f)
+        creds = list(creds.values())[0]
+        args["aws_access_key_id"] = creds["access_key_id"]
+        args["aws_secret_access_key"] = creds["secret_access_key"]
     main(args)

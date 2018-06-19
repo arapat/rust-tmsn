@@ -7,3 +7,5 @@ neighbors.txt
 example-configs
 
 _*
+env/
+credentials.yml

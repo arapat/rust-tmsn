@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 cd /home/ubuntu/workspace/rust-tmsn
+killall cargo
 killall rustc
 killall find-prime-nums
 git checkout -- .

@@ -3,6 +3,19 @@
 Run `pip install -r requirements.txt` to install the required python packages.
 
 
+## AWS Credential
+
+The scripts in this repository requires a `credentials.yml` file in following format:
+
+```yaml
+Arbitrary Name:
+  access_key_id: your_aws_access_key_id
+  secret_access_key: your_aws_secret_access_key
+```
+
+The credential file in the Spark Notebook project can be directly used here.
+
+
 ## Help message
 
 Run any script in this directory with `-h` argument will print the help message of the script.

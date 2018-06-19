@@ -74,3 +74,10 @@ Once all instances finished running, we can retrieve the output files from them.
 
 The script will create a sub-directory in `./_result` for every worker, and download the files from the workers
 to corresponding sub-directories.
+
+
+### Step 7: Terminate the cluster
+
+```bash
+../../scripts/terminate-cluster.py --name find-prime
+```
