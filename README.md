@@ -65,7 +65,7 @@ my_project rust-tmsn
 
 3. Append the dependency to `rust-tmsn` in your project
 
-Use your favorite editor and edit Cargo.toml file.
+Edit the `Cargo.toml` file.
 After the editing, your should see the following
 ```bash
 $ cat my_project/Cargo.toml
@@ -149,5 +149,5 @@ cargo build --release  # with optimization
 
 # Run
 cargo run  # without printing logs
-RUST_LOG=debug cargo run --example find-prime-nums  # with printing logs
+RUST_LOG=debug cargo run  # with printing logs
 ```
