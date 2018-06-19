@@ -124,6 +124,16 @@ fn main() {
 }
 ```
 
+Please refer to the `find-prime-nums.rs` file under the `/examples` directory for a more specific
+example of enabling the logging.
+
+Note that `env_logger` is used for configuration so that the logs would be written to stdout/stderr
+(which can then be redirected to other files using the commandline arguments if you like).
+To use the actual logging APIs (e.g. `info!()`, `error!()`, etc.), one should use the `log` crate.
+For more information on using logs in Rust, please check out
+[the documentation of the `log` crate](https://docs.rs/log/latest/log/).
+
+
 5. Compile your program and run it
 
 ```bash
