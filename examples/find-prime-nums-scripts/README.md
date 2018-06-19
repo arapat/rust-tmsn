@@ -12,26 +12,26 @@ Navigate to the directory that contains this `README.md` file, and follow the st
 
 Create a cluster that consists of 3 instances
 ```bash
-$ ../../scripts/create-cluster.py -c 3 -k jalafate-dropbox --name find-prime
+../../scripts/create-cluster.py -c 3 -k jalafate-dropbox --name find-prime
 ```
 
 Check the cluster status and obtain the `neighbors.txt` file
 ```bash
-$ ../../scripts/check-cluster.py --name find-prime
+../../scripts/check-cluster.py --name find-prime
 ```
 
 ### Step 2: Set up the cluster
 
 Set up the instances and clone this repository to all instances
 ```bash
-$ ../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ../../scripts/script-examples/init-worker.sh
+../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ../../scripts/script-examples/init-worker.sh
 ```
 
 ### Step 3: Generate configuration files for each instance and transfer them to the instances
 
 Generate individual configuration files for each instance
 ```bash
-$ ./gen-configs.py -n 1000 -c 3
+./gen-configs.py -n 1000 -c 3
 ```
 Specifically in this example, we want to generate configuration files that collectively
 find all prime numbers that no larger than 1000 using a cluster that consists of 3 instances.
@@ -53,7 +53,7 @@ Now we can tranfer these configuration files to the instances
 Create a script that starts your program, such as `./find-primes.sh` in this example,
 and launch this script on all instances using the `run-cluster.py` tool.
 ```bash
-$ ../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --files ./neighbors.txt --script ./find-primes.sh
+../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --files ./neighbors.txt --script ./find-primes.sh
 ```
 
 ### Step 5: Check if the program has finished executing
@@ -61,7 +61,7 @@ $ ../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox
 Create a script that checks if your program is still running, such as `./check-prog-status.sh`
 in this example, and launch this script on all instances using the `run-cluster.py` tool.
 ```bash
-./run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ./check-prog-status.sh --output
+../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ./check-prog-status.sh --output
 ```
 
 ### Step 6: Retrieve output files from the instances
