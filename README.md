@@ -1,7 +1,11 @@
 # rust-tmsn
 
 RustTMSN is a collection of general modules to help implementing TMSN
-for various learning algorithms.
+for various learning algorithms. For now it contains 2 components:
+
+1. a `network` module in Rust (which is documented in `/doc/rust_tmsn`),
+2. Python scripts for launching a cluster on Amazon Web Services to run a TMSN application
+(which is documented in `/scripts/README.md`).
 
 ## Try out the examples
 
@@ -61,7 +65,7 @@ my_project rust-tmsn
 
 3. Append the dependency to `rust-tmsn` in your project
 
-Use your favorite editor and edit Cargo.toml file.
+Edit the `Cargo.toml` file.
 After the editing, your should see the following
 ```bash
 $ cat my_project/Cargo.toml
@@ -84,11 +88,9 @@ the `env_logger` package in your project code.
 First add the dependency to the `env_logger` in the `Cargo.toml` file.
 
 ```toml
-...
 [dependencies]
 env_logger = "0.5.5"
 time = "0.1.39"
-...
 ```
 
 The `time` crate is optional, and used for specifying the logging format (see below).
@@ -126,6 +128,16 @@ fn main() {
 }
 ```
 
+Please refer to the `find-prime-nums.rs` file under the `/examples` directory for a more specific
+example of enabling the logging.
+
+Note that `env_logger` is used for configuration so that the logs would be written to stdout/stderr
+(which can then be redirected to other files using the commandline arguments if you like).
+To use the actual logging APIs (e.g. `info!()`, `error!()`, etc.), one should use the `log` crate.
+For more information on using logs in Rust, please check out
+[the documentation of the `log` crate](https://docs.rs/log/latest/log/).
+
+
 5. Compile your program and run it
 
 ```bash
@@ -137,5 +149,5 @@ cargo build --release  # with optimization
 
 # Run
 cargo run  # without printing logs
-RUST_LOG=debug cargo run --example find-prime-nums  # with printing logs
+RUST_LOG=debug cargo run  # with printing logs
 ```
