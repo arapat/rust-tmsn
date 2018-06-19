@@ -97,7 +97,8 @@ fn main() {
     let (remote_data_send, remote_data_recv): (Sender<Message>, Receiver<Message>) = mpsc::channel();
     // Local data queue, where the data generated locally would be put in
     let (local_data_send, local_data_recv) = mpsc::channel();
-    start_network("local", &neighbors, 8000, false, remote_data_send, local_data_recv);
+    start_network(&format!("worker-{}", worker_id), &neighbors, 8000,
+                  false, remote_data_send, local_data_recv);
 
 
     // This program goes through 3 stages:
