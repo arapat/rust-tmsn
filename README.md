@@ -15,8 +15,15 @@ RustTMSN is a collection of general modules written in the RUST language, which 
 1. Clone this repository
 2. Install [RUST](https://www.rust-lang.org/en-US/)
 2. Build the executable
-* Add example commands.
+```bash
+cargo build
+```
 3. Run stand-alone example
+```
+cargo run --example network
+```
+
+
 ## Scripts
 
 
