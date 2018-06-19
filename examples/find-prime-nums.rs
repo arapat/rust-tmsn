@@ -100,7 +100,7 @@ fn main() {
         // if not all workers are up, keep sending some signals
         // so that new workers can see this worker
         if num_workers_up < neighbors.len() {
-            local_data_send.send((worker_id.clone(), 1)).unwrap();
+            local_data_send.send((worker_id, 1)).unwrap();
             sleep(Duration::from_millis(500));
         }
     }
@@ -110,7 +110,7 @@ fn main() {
     let str_prime_nums: Vec<String> = all_primes.iter()
                                                 .map(|num| num.to_string())
                                                 .collect();
-    writeln!(file, "{}", str_prime_nums.join(" ")).unwrap();
+    writeln!(file, "Result from Worker {}:\n{}", worker_id, str_prime_nums.join(" ")).unwrap();
 }
 
 
@@ -119,15 +119,15 @@ fn main() {
 fn start_search(worker_id: u32, left: u32, right: u32, local_data_send: Sender<(u32, u32)>) {
     spawn(move|| {
         for num in left..right {
-            let mut is_nonprime = num != 2 && num % 2 == 0;
-            let mut k = 3;
-            while !is_nonprime && k * k <= num {
+            let mut is_prime = true;
+            let mut k = 2;
+            while is_prime && k * k <= num {
                 if num % k == 0 {
-                    is_nonprime = true;
+                    is_prime = false;
                 }
-                k += 2;
+                k += 1;
             }
-            if is_nonprime {
+            if num > 1 && is_prime {
                 // Found a non-prime number, broadcast to network
                 local_data_send.send((worker_id.clone(), num)).unwrap();
             }
