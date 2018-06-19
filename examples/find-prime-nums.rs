@@ -59,49 +59,49 @@ fn main() {
     start_network("local", &neighbors, 8000, false, remote_data_send, local_data_recv);
 
     // Wait for all computers to be online
-    let mut all_workers_up = false;
     let mut up_workers = vec![false; neighbors.len()];
+    let mut num_workers_up = 0;
+    let mut num_workers_down = 0;
     // Vectors to store all prime numbers received from network
     let mut all_primes: Vec<u32> = vec![];
-    let mut num_working_workers = 0;
 
     // Workers send a number `1` when they are up;
     // then start sending all prime numbers they found;
     // finally send a number `0` before terminating
-
+    //
     // The worker start the thread that actually search for
     // the prime numbers after it receives the "up" signals (the number `1`)
     // from all workers.
+    //
     // After that, it keeps listening to the network until
-    // the number of workers that send the "down" signal (the number `0`)
-    // is equal to the number of workers in the network
-
-    while !all_workers_up || num_working_workers > 0 {
-        println!("status, {}, {}", all_workers_up, num_working_workers);
-        if !all_workers_up {
-            local_data_send.send((worker_id.clone(), 1)).unwrap();
-            sleep(Duration::from_millis(500));
-        }
+    // it receives "down" signals (the number `0`) from all workers.
+    while num_workers_up < neighbors.len() || num_workers_down < neighbors.len() {
+        println!("status, {}, {}", num_workers_up, num_workers_down);
         if let Ok((machine_id, num)) = remote_data_recv.try_recv() {
             println!("received, {}, {}", machine_id, num);
             if num != 0 && num != 1 {
                 // if the incoming number is neither "up" nor "down" signals
                 // then it is the prime number found by other machines
                 all_primes.push(num);
-            }
-            else if num == 1 && up_workers[machine_id as usize] == false {
-                // a new (unseen) worker is up
-                up_workers[machine_id as usize] = true;
-                num_working_workers += 1;
-                // if all workers are up
-                if num_working_workers == neighbors.len() {
-                    all_workers_up = true;
-                    start_search(worker_id, left, right, local_data_send.clone());
-                }
             } else if num == 0 {
                 // a worker is stopped
-                num_working_workers -= 1;
+                num_workers_down += 1;
             }
+            if up_workers[machine_id as usize] == false {
+                // a new (unseen) worker is up
+                up_workers[machine_id as usize] = true;
+                num_workers_up += 1;
+                // if all workers are up, start search and broadcast prime numbers
+                if num_workers_up == neighbors.len() {
+                    start_search(worker_id, left, right, local_data_send.clone());
+                }
+            }
+        }
+        // if not all workers are up, keep sending some signals
+        // so that new workers can see this worker
+        if num_workers_up < neighbors.len() {
+            local_data_send.send((worker_id.clone(), 1)).unwrap();
+            sleep(Duration::from_millis(500));
         }
     }
     all_primes.sort();
