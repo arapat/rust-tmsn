@@ -1,4 +1,3 @@
-
 ## Demo: Find Prime Numbers
 
 In this example, we want to find all prime numbers that no larger than a given positive number N.
