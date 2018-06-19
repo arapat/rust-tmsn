@@ -84,11 +84,9 @@ the `env_logger` package in your project code.
 First add the dependency to the `env_logger` in the `Cargo.toml` file.
 
 ```toml
-...
 [dependencies]
 env_logger = "0.5.5"
 time = "0.1.39"
-...
 ```
 
 The `time` crate is optional, and used for specifying the logging format (see below).
