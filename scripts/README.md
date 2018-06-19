@@ -2,8 +2,16 @@
 
 Run `pip install -r requirements.txt` to install the required python packages.
 
+## Requirements
 
-## AWS Credential
+These scripts requires Python 3 and the `awscli` package for Python 3. In addition,
+the `create-cluster.py` script uses an AMI image that located in the region `us-east-1`.
+So please make sure that your local environment is set up to use that region.
+If it is not, you can change it by running `aws configure` in your commandline, and type
+`us-east-1` for the region when prompted.
+
+
+### AWS Credential
 
 The scripts in this repository requires a `credentials.yml` file in following format:
 
@@ -29,7 +37,7 @@ Run any script in this directory with `-h` argument will print the help message 
 
 ### Example
 ```bash
-./create-cluster.py -c 2 --name testing --key ec2-key-pair
+./create-cluster.py -c 2 --name testing
 ```
 
 
