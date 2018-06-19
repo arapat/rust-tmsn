@@ -17,6 +17,12 @@ Arbitrary Name:
 
 The credential file in the Spark Notebook project can be directly used here.
 
+The credential file (or a soft link to it) should be located in the same folder where
+you invoke these scripts (i.e. you should be able to see it using `ls .` command).
+The credential file must always **stay private** and not be shared. Remember to add
+`credential.yml` to the `.gitignore` file of your project so that this
+file would not be pushed to GitHub.
+
 
 ## Help message
 
