@@ -77,11 +77,13 @@ fn main() {
     // is equal to the number of workers in the network
 
     while !all_workers_up || num_working_workers > 0 {
+        println!("status, {}, {}", all_workers_up, num_working_workers);
         if !all_workers_up {
             local_data_send.send((worker_id.clone(), 1)).unwrap();
             sleep(Duration::from_millis(500));
         }
         if let Ok((machine_id, num)) = remote_data_recv.try_recv() {
+            println!("received, {}, {}", machine_id, num);
             if num != 0 && num != 1 {
                 // if the incoming number is neither "up" nor "down" signals
                 // then it is the prime number found by other machines

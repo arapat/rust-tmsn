@@ -40,7 +40,7 @@ def main(args):
     remote_file_path = os.path.join(base_path, filename)
     run_in_foreground = args["output"]
     log_path = "/tmp/run.log"
-    for idx, url in enumerate(instances):
+    for url in instances:
         # Create base path
         command = ("ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
                    "\"mkdir -p {}\";").format(key, url, base_path)
@@ -62,8 +62,7 @@ def main(args):
                 command += "\" {} \"".format(f.read())
         else:
             command += "\"{} > {} 2>&1 < /dev/null\"".format(remote_file_path, log_path)
-            if idx + 1 < len(instances):
-                command = "({}) &".format(command)
+            command = "({}) &".format(command)
 
         if run_in_foreground:
             print()
