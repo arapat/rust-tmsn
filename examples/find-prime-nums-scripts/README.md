@@ -12,7 +12,7 @@ Navigate to the directory that contains this `README.md` file, and follow the st
 
 Create a cluster that consists of 3 instances
 ```bash
-../../scripts/create-cluster.py -c 3 -k jalafate-dropbox --name find-prime
+../../scripts/create-cluster.py -c 3 -k ec2-key-pair --name find-prime
 ```
 
 Check the cluster status and obtain the `neighbors.txt` file
@@ -24,7 +24,7 @@ Check the cluster status and obtain the `neighbors.txt` file
 
 Set up the instances and clone this repository to all instances
 ```bash
-../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ../../scripts/script-examples/init-worker.sh
+../../scripts/run-cluster.py -k ./ec2-key-pair.pem --script ../../scripts/script-examples/init-worker.sh
 ```
 
 ### Step 3: Generate configuration files for each instance and transfer them to the instances
@@ -45,7 +45,7 @@ config-0.json  config-1.json  config-2.json
 
 Now we can tranfer these configuration files to the instances
 ```bash
-../../scripts/send-configs.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --config ./example-configs/
+../../scripts/send-configs.py -k ./ec2-key-pair.pem --config ./example-configs/
 ```
 
 ### Step 4: Run the program that finds prime numbers on the cluster
@@ -53,7 +53,7 @@ Now we can tranfer these configuration files to the instances
 Create a script that starts your program, such as `./find-primes.sh` in this example,
 and launch this script on all instances using the `run-cluster.py` tool.
 ```bash
-../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --files ./neighbors.txt --script ./find-primes.sh
+../../scripts/run-cluster.py -k ./ec2-key-pair.pem --files ./neighbors.txt --script ./find-primes.sh
 ```
 
 ### Step 5: Check if the program has finished executing
@@ -61,7 +61,7 @@ and launch this script on all instances using the `run-cluster.py` tool.
 Create a script that checks if your program is still running, such as `./check-prog-status.sh`
 in this example, and launch this script on all instances using the `run-cluster.py` tool.
 ```bash
-../../scripts/run-cluster.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --script ./check-prog-status.sh --output
+../../scripts/run-cluster.py -k ./ec2-key-pair.pem --script ./check-prog-status.sh --output
 ```
 
 ### Step 6: Retrieve output files from the instances
@@ -69,7 +69,7 @@ in this example, and launch this script on all instances using the `run-cluster.
 Once all instances finished running, we can retrieve the output files from them.
 
 ```bash
-../../scripts/retrieve-files.py -k ~/Dropbox/documents/vault/aws/jalafate-dropbox.pem --remote /home/ubuntu/workspace/rust-tmsn/primes.txt --local ./_result/
+../../scripts/retrieve-files.py -k ./ec2-key-pair.pem --remote /home/ubuntu/workspace/rust-tmsn/primes.txt --local ./_result/
 ```
 
 The script will create a sub-directory in `./_result` for every worker, and download the files from the workers
