@@ -42,7 +42,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Crate a cluster using AWS spot instances")
+    parser = argparse.ArgumentParser(description="Retrieve the files from the instances of a cluster")
     parser.add_argument("--remote",
                         required=True,
                         nargs='+',

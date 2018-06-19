@@ -34,7 +34,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Terminate a cluster")
+    parser = argparse.ArgumentParser(description="Terminate a cluster")
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")

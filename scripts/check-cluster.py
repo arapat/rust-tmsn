@@ -35,7 +35,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Query the status of a cluster")
+    parser = argparse.ArgumentParser(description="Check the status of a cluster")
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")

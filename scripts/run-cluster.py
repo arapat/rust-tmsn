@@ -78,7 +78,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Crate a cluster using AWS spot instances")
+    parser = argparse.ArgumentParser(description="Run a script on all instances of a cluster")
     parser.add_argument("-s", "--script",
                         required=True,
                         help="File path of the script that needs to run on the cluster")

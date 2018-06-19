@@ -28,7 +28,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Crate a cluster using AWS spot instances")
+    parser = argparse.ArgumentParser(description="Crate a cluster using AWS spot instances")
     parser.add_argument("-c", "--count",
                         required=True,
                         help="the number of instances in the cluster")

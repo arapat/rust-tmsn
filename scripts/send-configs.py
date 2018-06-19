@@ -51,7 +51,8 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = "Crate a cluster using AWS spot instances")
+    parser = argparse.ArgumentParser(
+        description="Send a different configuration file to each instance of a cluster")
     parser.add_argument("--config",
                         required=True,
                         help="Path of the directory that contains all configuration files")
