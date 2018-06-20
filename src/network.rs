@@ -26,22 +26,6 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 
 /// Start the network module on the current computer.
 ///
-/// The local computer name is specified using `name`.
-/// The name here is only used for the debug purpose.
-///
-/// Initially, the local computer establishes TCP connections to all computers specified
-/// in `init_remote_ips` (neighbors), and *receive* data from them.
-/// If `is_two_way` is set to `false`, the connections are one-way, thus the neighbors are
-/// not necessarily receiving data from the local computer (unless this computer is in their `init_remote_ips` parameter).
-/// If `is_two_way` is set to `true`, the connections are two-way, i.e. the local computer
-/// will also send its data to its neighbors from whom it receives data from.
-///
-/// All computers listen to the port `port` to receive packages from other computers.
-///
-/// The model received from remote computers would be sent out using the channel `data_remote`.
-/// Meanwhile, the local models are received from the channel `data_local`, and sent out
-/// to the neighbor of this machine.
-///
 /// ## Example
 /// ```
 /// use std::sync::mpsc;
@@ -94,7 +78,35 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, init_remote_ips: &Vec<String>, port: u16,
-        is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>) {
+    is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>)'
+/// ## Description
+/// Starts a broadcast network using a subscription list.
+/// The network recieves as input (pointers to) two channels, one for outgoing packets and the other for incoming packets.
+    
+/// Each machine maintains a list of subscriptions. The list defines
+/// the IPs that this machine is listening to.
+
+/// There are two modes:
+/// * `is_two_way=false`: The list of IPs is
+/// established at initialization. The machine listens only to those
+/// IPs.
+/// * 
+
+/// ### parameters
+/// * `name` The local computer name.
+/// * `init_remote_ips` - A list of IPs to which this computer makes a connection initially.
+/// * `port` - the port number you are listening to. Has to be the same in all machines.    
+/// * `is_two_way` - A flag that indicates which sender IPs this machine will listen to. See description above.
+/// * 
+    
+///
+/// The model received from remote computers would be sent out using the channel `data_remote`.
+/// Meanwhile, the local models are received from the channel `data_local`, and sent out
+/// to the neighbor of this machine.
+///
+/// * 
+///
+{
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
