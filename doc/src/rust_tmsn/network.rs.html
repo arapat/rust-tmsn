@@ -363,6 +363,42 @@
 <span id="306">306</span>
 <span id="307">307</span>
 <span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
 </pre><pre class="rust ">
 <span class="kw">use</span> <span class="ident">bufstream</span>::<span class="ident">BufStream</span>;
 
@@ -390,23 +426,59 @@
 <span class="kw">type</span> <span class="ident">StreamLockVec</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BufStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;&gt;</span><span class="op">&gt;&gt;</span>;
 
 
-<span class="doccomment">/// Start the network module on the current computer.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The local computer name is specified using `name`.</span>
-<span class="doccomment">/// The name here is only used for the debug purpose.</span>
+<span class="doccomment">/// Starts a broadcast network using a subscription list.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Initially, the local computer establishes TCP connections to all computers specified</span>
-<span class="doccomment">/// in `init_remote_ips` (neighbors), and *receive* data from them.</span>
-<span class="doccomment">/// If `is_two_way` is set to `false`, the connections are one-way, thus the neighbors are</span>
-<span class="doccomment">/// not necessarily receiving data from the local computer (unless this computer is in their `init_remote_ips` parameter).</span>
-<span class="doccomment">/// If `is_two_way` is set to `true`, the connections are two-way, i.e. the local computer</span>
-<span class="doccomment">/// will also send its data to its neighbors from whom it receives data from.</span>
+<span class="doccomment">/// The network recieves as input a sender and a receiver of two channels, respectively,</span>
+<span class="doccomment">/// one for incoming packets and the other for outgoing packets.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// All computers listen to the port `port` to receive packages from other computers.</span>
+<span class="doccomment">/// Each machine maintains a list of subscriptions. The list defines</span>
+<span class="doccomment">/// the IPs that this machine is listening to.</span>
+<span class="doccomment">/// Initially, this list is provided as the parameter `init_remote_ips`</span>
+<span class="doccomment">/// of the function `start_network`.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The model received from remote computers would be sent out using the channel `data_remote`.</span>
-<span class="doccomment">/// Meanwhile, the local models are received from the channel `data_local`, and sent out</span>
-<span class="doccomment">/// to the neighbor of this machine.</span>
+<span class="doccomment">/// There are two modes for how connections are established:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// * `is_two_way=false`: The list of IPs for subscription are</span>
+<span class="doccomment">/// limited to those provided in `init_remote_ips` at the initialization.</span>
+<span class="doccomment">/// The machine listens only to those IPs.</span>
+<span class="doccomment">/// In this mode, it is possible that a one-way connection exists between some</span>
+<span class="doccomment">/// machines, namely, a machine A listens to a machine B, but the machine B</span>
+<span class="doccomment">/// does not listen to the machine A.</span>
+<span class="doccomment">/// * `is_two_way=true`: The machine first subscribes and listens to all IPs provided</span>
+<span class="doccomment">/// in `init_remote_ips` at the initialization.</span>
+<span class="doccomment">/// In addition, the machine also subscribes to all other machines that are subscribing to</span>
+<span class="doccomment">/// this machine, even if the IP of the other machine is not listed in `init_remote_ips`.</span>
+<span class="doccomment">/// In this mode, two machine are either not listening to each other,</span>
+<span class="doccomment">/// or connected in both directions (both listening to the other).</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// ## Parameters</span>
+<span class="doccomment">/// * `name` - the local computer name.</span>
+<span class="doccomment">/// * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.</span>
+<span class="doccomment">/// * `port` - the port number that the machines in the network are listening to.</span>
+<span class="doccomment">/// `port` has to be the same value for all machines.</span>
+<span class="doccomment">/// * `is_two_way` - a flag that indicates which IPs this machine will listen to.</span>
+<span class="doccomment">/// See description above.</span>
+<span class="doccomment">/// * `data_remote` - a sender of the channel for transmitting the data received from the network.</span>
+<span class="doccomment">/// See the notes below.</span>
+<span class="doccomment">/// * `data_local` - a reciever of the channel for transmitting the data to</span>
+<span class="doccomment">/// be broadcasted to the network. See the notes below.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// ## Notes</span>
+<span class="doccomment">/// In order to send/receive data using the network, your program should first create</span>
+<span class="doccomment">/// two [mpsc channels](https://doc.rust-lang.org/std/sync/mpsc/),</span>
+<span class="doccomment">/// one for incoming packets, one for outgoing packets.</span>
+<span class="doccomment">/// Then start the network using the `start_network` function,</span>
+<span class="doccomment">/// and pass the sender or receiver of the two channels to the</span>
+<span class="doccomment">/// network module as the function parameters.</span>
+<span class="doccomment">/// The network module will broadcast out all packets received from the channel,</span>
+<span class="doccomment">/// and also send the packets received from the network to the other channel.</span>
+<span class="doccomment">/// Correspondingly, your program should write the data to be sent out to the channel,</span>
+<span class="doccomment">/// and read the other channel to receive the packets from other machines.</span>
+<span class="doccomment">/// See the example below for demonstration.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// The network structure between the machines are decided by your program, specifically by</span>
+<span class="doccomment">/// explicitly setting the list of IPs to be subscribed from each machine.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ## Example</span>
 <span class="doccomment">/// ```</span>
@@ -422,7 +494,7 @@
 <span class="doccomment">/// let (local_data_send, local_data_recv) = mpsc::channel();</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// let network = vec![String::from(&quot;127.0.0.1&quot;)];</span>
-<span class="doccomment">/// start_network(&quot;local&quot;, &amp;network, 8000, remote_data_send, local_data_recv);</span>
+<span class="doccomment">/// start_network(&quot;local&quot;, &amp;network, 8000, false, remote_data_send, local_data_recv);</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // Put a test message in the local_data</span>
 <span class="doccomment">/// let message = String::from(&quot;Hello, this is a test message.&quot;);</span>
@@ -443,7 +515,7 @@
 <span class="doccomment">/// Initially, the local computer only connects to the computers specificed by the</span>
 <span class="doccomment">/// `init_remote_ips` vector in the function parameters (neighbors), and *receive* data from</span>
 <span class="doccomment">/// these computers.</span>
-<span class="doccomment">/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the </span>
+<span class="doccomment">/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the</span>
 <span class="doccomment">/// Receiver. The number of Receivers on a computer is always equal to the number of neighbors.</span>
 <span class="doccomment">/// On the other end, only one **Sender** is created for a computer, which send data to all other</span>
 <span class="doccomment">/// computers that connected to it.</span>
@@ -671,7 +743,8 @@
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Received an empty message from {}, message ID {}&quot;</span>, <span class="ident">remote_ip</span>, <span class="ident">idx</span>)
         }
     }
-}</pre>
+}
+</pre>
 </section>
     <section id='search' class="content hidden"></section>
 

@@ -24,7 +24,59 @@ use serde_json;
 type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 
 
-/// Start the network module on the current computer.
+///
+/// Starts a broadcast network using a subscription list.
+///
+/// The network recieves as input a sender and a receiver of two channels, respectively,
+/// one for incoming packets and the other for outgoing packets.
+///
+/// Each machine maintains a list of subscriptions. The list defines
+/// the IPs that this machine is listening to.
+/// Initially, this list is provided as the parameter `init_remote_ips`
+/// of the function `start_network`.
+///
+/// There are two modes for how connections are established:
+///
+/// * `is_two_way=false`: The list of IPs for subscription are
+/// limited to those provided in `init_remote_ips` at the initialization.
+/// The machine listens only to those IPs.
+/// In this mode, it is possible that a one-way connection exists between some
+/// machines, namely, a machine A listens to a machine B, but the machine B
+/// does not listen to the machine A.
+/// * `is_two_way=true`: The machine first subscribes and listens to all IPs provided
+/// in `init_remote_ips` at the initialization.
+/// In addition, the machine also subscribes to all other machines that are subscribing to
+/// this machine, even if the IP of the other machine is not listed in `init_remote_ips`.
+/// In this mode, two machine are either not listening to each other,
+/// or connected in both directions (both listening to the other).
+///
+/// ## Parameters
+/// * `name` - the local computer name.
+/// * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
+/// * `port` - the port number that the machines in the network are listening to.
+/// `port` has to be the same value for all machines.
+/// * `is_two_way` - a flag that indicates which IPs this machine will listen to.
+/// See description above.
+/// * `data_remote` - a sender of the channel for transmitting the data received from the network.
+/// See the notes below.
+/// * `data_local` - a reciever of the channel for transmitting the data to
+/// be broadcasted to the network. See the notes below.
+///
+/// ## Notes
+/// In order to send/receive data using the network, your program should first create
+/// two [mpsc channels](https://doc.rust-lang.org/std/sync/mpsc/),
+/// one for incoming packets, one for outgoing packets.
+/// Then start the network using the `start_network` function,
+/// and pass the sender or receiver of the two channels to the
+/// network module as the function parameters.
+/// The network module will broadcast out all packets received from the channel,
+/// and also send the packets received from the network to the other channel.
+/// Correspondingly, your program should write the data to be sent out to the channel,
+/// and read the other channel to receive the packets from other machines.
+/// See the example below for demonstration.
+///
+/// The network structure between the machines are decided by your program, specifically by
+/// explicitly setting the list of IPs to be subscribed from each machine.
 ///
 /// ## Example
 /// ```
@@ -40,7 +92,7 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// let (local_data_send, local_data_recv) = mpsc::channel();
 ///
 /// let network = vec![String::from("127.0.0.1")];
-/// start_network("local", &network, 8000, remote_data_send, local_data_recv);
+/// start_network("local", &network, 8000, false, remote_data_send, local_data_recv);
 ///
 /// // Put a test message in the local_data
 /// let message = String::from("Hello, this is a test message.");
@@ -61,7 +113,7 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// Initially, the local computer only connects to the computers specificed by the
 /// `init_remote_ips` vector in the function parameters (neighbors), and *receive* data from
 /// these computers.
-/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the 
+/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the
 /// Receiver. The number of Receivers on a computer is always equal to the number of neighbors.
 /// On the other end, only one **Sender** is created for a computer, which send data to all other
 /// computers that connected to it.
@@ -78,35 +130,7 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, init_remote_ips: &Vec<String>, port: u16,
-    is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>)'
-/// ## Description
-/// Starts a broadcast network using a subscription list.
-/// The network recieves as input (pointers to) two channels, one for outgoing packets and the other for incoming packets.
-    
-/// Each machine maintains a list of subscriptions. The list defines
-/// the IPs that this machine is listening to.
-
-/// There are two modes:
-/// * `is_two_way=false`: The list of IPs is
-/// established at initialization. The machine listens only to those
-/// IPs.
-/// * 
-
-/// ### parameters
-/// * `name` The local computer name.
-/// * `init_remote_ips` - A list of IPs to which this computer makes a connection initially.
-/// * `port` - the port number you are listening to. Has to be the same in all machines.    
-/// * `is_two_way` - A flag that indicates which sender IPs this machine will listen to. See description above.
-/// * 
-    
-///
-/// The model received from remote computers would be sent out using the channel `data_remote`.
-/// Meanwhile, the local models are received from the channel `data_local`, and sent out
-/// to the neighbor of this machine.
-///
-/// * 
-///
-{
+        is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>) {
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections

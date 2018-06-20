@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["start_network","Start the network module on the current computer."]]});
+initSidebarItems({"fn":[["start_network","Starts a broadcast network using a subscription list."]]});
