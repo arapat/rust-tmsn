@@ -1,41 +1,42 @@
 #!/usr/bin/env python
 import argparse
-import json
-import subprocess
 
 from operator import itemgetter
-from config import load_config
+from common import load_config
+from common import query_status
 
 
 def main(args):
-    query_command = """
-    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
-    aws ec2 describe-instances \
-        --filter Name=tag:cluster-name,Values={} \
-        --query 'Reservations[*].Instances[*].[State.Name,PublicIpAddress]'
-    """.format(args["aws_access_key_id"], args["aws_secret_access_key"], args["name"])
-    result = subprocess.run(query_command, shell=True, check=True, stdout=subprocess.PIPE)
-    output = result.stdout
-    status = json.loads(output)
-    if len(status) == 0:
+    all_status = query_status(args)
+    if len(all_status) == 0:
         print("No instance found in the cluster '{}'. Quit.".format(args["name"]))
         return
-    status = status[-1]
+    print("{} clusters found with the name '{}'.".format(len(all_status), args["name"]))
 
-    total = len(status)
-    ready = sum(t[0] == "running" for t in status)
-    neighbors = list(map(itemgetter(1), status))
-    print("Total instances: {}\nReady and running: {}".format(total, ready))
-    if ready == 0:
-        return
-    with open("neighbors.txt", 'w') as f:
-        if total == ready:
-            f.write("Ready. ")
-        else:
-            f.write("NOT ready. ")
-        f.write("IP addresses of all instances:\n")
-        f.write('\n'.join(neighbors))
-    print("The public IP addresses of the instances have been written into `./neighbors.txt`")
+    num_ready = 0
+    for idx, status in enumerate(all_status):
+        total = len(status)
+        if total == 0:
+            continue
+        print("\nCluster {}:".format(idx + 1))
+        ready = sum(t[0] == "running" for t in status)
+        neighbors = list(map(itemgetter(1), status))
+        print("    Total instances: {}\n    Running: {}".format(total, ready))
+        if ready == 0:
+            print("    Instances status: {}".format(status[0][0]))
+            continue
+        with open("neighbors.txt", 'w') as f:
+            if total == ready:
+                f.write("Ready. ")
+            else:
+                f.write("NOT ready. ")
+            f.write("IP addresses of all instances:\n")
+            f.write('\n'.join(neighbors))
+        print("    The public IP addresses of the instances have been written into "
+              "`./neighbors.txt`")
+    if num_ready > 1:
+        print("WARN: More than 1 cluster with the name '{}' exists. "
+              "Only the IP addresses of the instances of the last cluster have been written to disk.")
 
 
 if __name__ == '__main__':

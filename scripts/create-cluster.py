@@ -2,10 +2,18 @@
 import argparse
 import subprocess
 
-from config import load_config
+from common import load_config
+from common import query_status
 
 
 def main(args):
+    all_status = query_status(args)
+    if len(all_status):
+        print("Error: A cluster with the name '{}' exists. ".format(args["name"]) +
+              "Please choose a different cluster name.\n" +
+              "Note: If you want to check the status of the cluster '{}', ".format(args["name"]) +
+              "please use `./check-cluster`.")
+        return
     create_command = """
     AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
     aws ec2 run-instances \

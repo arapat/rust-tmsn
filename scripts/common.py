@@ -1,4 +1,6 @@
+import json
 import os
+import subprocess
 import sys
 import yaml
 
@@ -34,3 +36,16 @@ def load_config(args, config_path="~/.tmsn_config"):
     # Load credential
     load_credential(config)
     return config
+
+
+def query_status(args):
+    query_command = """
+    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
+    aws ec2 describe-instances \
+        --filter Name=tag:cluster-name,Values={} \
+        --query 'Reservations[*].Instances[*].[State.Name,PublicIpAddress]'
+    """.format(args["aws_access_key_id"], args["aws_secret_access_key"], args["name"])
+    result = subprocess.run(query_command, shell=True, check=True, stdout=subprocess.PIPE)
+    output = result.stdout
+    all_status = json.loads(output)
+    return all_status

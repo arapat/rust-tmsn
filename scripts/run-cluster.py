@@ -3,7 +3,7 @@ import argparse
 import os
 import subprocess
 
-from config import load_config
+from common import load_config
 
 
 def check_exists(path):
