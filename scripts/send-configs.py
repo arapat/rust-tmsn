@@ -15,8 +15,8 @@ def parse_file_path(path):
 
 
 def main(args):
-    if not check_exists(args["key"]):
-        print("Error: File '{}' does not exist.".format(args["key"]))
+    if not check_exists(args["key_path"]):
+        print("Error: File '{}' does not exist.".format(args["key_path"]))
         return
     if not check_exists(args["neighbors"]):
         print("Error: File '{}' does not exist.".format(args["neighbors"]))
@@ -40,7 +40,7 @@ def main(args):
               "of instances ({}).".format(args["config"], len(configs), len(instances)))
 
     # Send the files
-    key = args["key"]
+    key = args["key_path"]
     base_path = args["base_path"]
     remote_path = os.path.join(base_path, "configuration")
     for url, config in zip(instances, configs):

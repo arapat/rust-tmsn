@@ -15,13 +15,13 @@ def parse_file_path(path):
 
 
 def main(args):
-    if not check_exists(args["key"]):
-        print("Error: File '{}' does not exist.".format(args["key"]))
+    if not check_exists(args["key_path"]):
+        print("Error: File '{}' does not exist.".format(args["key_path"]))
         return
     if not check_exists(args["neighbors"]):
         print("Error: File '{}' does not exist.".format(args["neighbors"]))
         return
-    if args["files"] is None:
+    if "files" not in args or args["files"] is None:
         args["files"] = []
     for filepath in args["files"]:
         if not check_exists(filepath):
@@ -36,7 +36,7 @@ def main(args):
             return
         instances = [t.strip() for t in f if t.strip()]
 
-    key = args["key"]
+    key = args["key_path"]
     base_path = args["base_path"]
     fullpath, filename = parse_file_path(args["script"])
     remote_file_path = os.path.join(base_path, filename)
@@ -51,17 +51,15 @@ def main(args):
             command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
                         ";").format(key, filepath, url, base_path)
         # Send the script and make it runnable
-        if not run_in_foreground:
-            command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
-                        ";").format(key, fullpath, url, base_path)
-            command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
-                        "\"sudo chmod u+x {}\";").format(key, url, remote_file_path)
+        command += (" scp -o StrictHostKeyChecking=no -i {} {} ubuntu@{}:{}"
+                    ";").format(key, fullpath, url, base_path)
+        command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
+                    "\"sudo chmod u+x {}\";").format(key, url, remote_file_path)
         # Execute the script
         command += (" ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
                     "").format(key, url)
         if run_in_foreground:
-            with open(fullpath) as f:
-                command += "\" {} \"".format(f.read())
+            command += "\"{}\"".format(remote_file_path)
         else:
             command += "\"{} > {} 2>&1 < /dev/null\"".format(remote_file_path, log_path)
             command = "({}) &".format(command)

@@ -11,8 +11,8 @@ def check_exists(path):
 
 
 def main(args):
-    if not check_exists(args["key"]):
-        print("Error: File '{}' does not exist.".format(args["key"]))
+    if not check_exists(args["key_path"]):
+        print("Error: File '{}' does not exist.".format(args["key_path"]))
         return
     if not check_exists(args["neighbors"]):
         print("Error: File '{}' does not exist.".format(args["neighbors"]))
@@ -29,7 +29,7 @@ def main(args):
     # Retrieve the files
     local_dir = args["local"]
     remote_files = args["remote"]
-    key = args["key"]
+    key = args["key_path"]
     commands = []
     for idx, url in enumerate(instances):
         local_path = os.path.join(local_dir, "worker-{}".format(idx))

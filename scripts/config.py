@@ -9,6 +9,7 @@ def load_config(args, config_path="~/.tmsn_config"):
             creds = yaml.load(f)
             creds = list(creds.values())[0]
             config["key"] = creds["key_name"]
+            config["key_path"] = creds["ssh_key"]
             config["aws_access_key_id"] = creds["access_key_id"]
             config["aws_secret_access_key"] = creds["secret_access_key"]
 
@@ -20,9 +21,10 @@ def load_config(args, config_path="~/.tmsn_config"):
             config = yaml.load(f)
     # Load arguments
     for t in args:
-        config[t] = args[t]
+        if args[t] is not None:
+            config[t] = args[t]
     # Check the credential file
-    if "credential" not in config:
+    if "credential" not in config or not config["credential"]:
         print("Error: Please provide the path to the credential file.")
         sys.exit(1)
     config["credential"] = os.path.abspath(config["credential"])
