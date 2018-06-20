@@ -2,7 +2,8 @@
 import argparse
 import os
 import subprocess
-import yaml
+
+from config import load_config
 
 
 def check_exists(path):
@@ -52,13 +53,9 @@ if __name__ == '__main__':
     parser.add_argument("--local",
                         required=True,
                         help="Path of the local directory to download the remote files")
-    # parser.add_argument("-k", "--key",
-    #                     required=True,
-    #                     help="File path of the EC2 key pair file")
+    parser.add_argument("--credential",
+                        help="path to the credential file")
     args = vars(parser.parse_args())
-    args["neighbors"] = "./neighbors.txt"
-    with open("credentials.yml") as f:
-        creds = yaml.load(f)
-        creds = list(creds.values())[0]
-        args["key"] = creds["ssh_key"]
-    main(args)
+    args["neighbors"] = os.path.abspath("./neighbors.txt")
+    config = load_config(args)
+    main(config)

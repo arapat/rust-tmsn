@@ -2,9 +2,9 @@
 import argparse
 import json
 import subprocess
-import yaml
 
 from operator import itemgetter
+from config import load_config
 
 
 def main(args):
@@ -43,10 +43,7 @@ if __name__ == '__main__':
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")
-    args = vars(parser.parse_args())
-    with open("credentials.yml") as f:
-        creds = yaml.load(f)
-        creds = list(creds.values())[0]
-        args["aws_access_key_id"] = creds["access_key_id"]
-        args["aws_secret_access_key"] = creds["secret_access_key"]
-    main(args)
+    parser.add_argument("--credential",
+                        help="path to the credential file")
+    config = load_config(vars(parser.parse_args()))
+    main(config)
