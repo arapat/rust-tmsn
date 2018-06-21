@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from common import load_config
+from common import check_connections
 
 
 def check_exists(path):
@@ -41,7 +42,10 @@ def main(args):
     fullpath, filename = parse_file_path(args["script"])
     remote_file_path = os.path.join(base_path, filename)
     run_in_foreground = args["output"]
-    log_path = "/tmp/run.log"
+    stdout_path = "/tmp/stdout.log"
+    stderr_path = "/tmp/stderr.log"
+    if not check_connections(instances, args):
+        return
     for url in instances:
         # Create base path
         command = ("ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
@@ -61,7 +65,8 @@ def main(args):
         if run_in_foreground:
             command += "\"{}\"".format(remote_file_path)
         else:
-            command += "\"{} > {} 2>&1 < /dev/null\"".format(remote_file_path, log_path)
+            command += "\"{} > {} 2>{} < /dev/null\"".format(
+                remote_file_path, stdout_path, stderr_path)
             command = "({}) &".format(command)
 
         if run_in_foreground:
@@ -72,9 +77,9 @@ def main(args):
     if not run_in_foreground:
         print("\nThe script '{}' has been started in the background on all instances. "
             "Note that we don't check if the script is launched successfully "
-            "or is finished.\n"
-            "The stdout/stderr of the script has been redirected to the file {} "
-            "on the remote instance".format(fullpath, log_path))
+            "or is finished.\n\n"
+            "The stdout/stderr of the script has been redirected to the file {} and {} "
+            "on the remote instances.".format(fullpath, stdout_path, stderr_path))
 
 
 if __name__ == '__main__':

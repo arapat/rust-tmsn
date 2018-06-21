@@ -2,10 +2,10 @@
 
 if pgrep -x "find-prime-nums" > /dev/null
 then
-    echo "Running"
+    echo "Status: Running"
 elif pgrep -x "cargo" > /dev/null
 then
-    echo "Compiling"
+    echo "Status: Compiling"
 else
-    echo "Stopped"
+    echo "Status: Stopped"
 fi

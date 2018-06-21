@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from common import load_config
+from common import check_connections
 
 
 def check_exists(path):
@@ -43,6 +44,8 @@ def main(args):
     key = args["key_path"]
     base_path = args["base_path"]
     remote_path = os.path.join(base_path, "configuration")
+    if not check_connections(instances, args):
+        return
     for url, config in zip(instances, configs):
         print("Sending the config file to '{}'".format(url))
         config_path = os.path.join(local_path, config)

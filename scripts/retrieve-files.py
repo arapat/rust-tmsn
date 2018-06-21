@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from common import load_config
+from common import check_connections
 
 
 def check_exists(path):
@@ -31,6 +32,8 @@ def main(args):
     remote_files = args["remote"]
     key = args["key_path"]
     commands = []
+    if not check_connections(instances, args):
+        return
     for idx, url in enumerate(instances):
         local_path = os.path.join(local_dir, "worker-{}".format(idx))
         command = "mkdir -p {}".format(local_path)

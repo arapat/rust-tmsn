@@ -49,3 +49,22 @@ def query_status(args):
     output = result.stdout
     all_status = json.loads(output)
     return all_status
+
+
+def check_connections(instances, args, timeout=2):
+    def try_ssh_instance(url):
+        command = ("ssh -o StrictHostKeyChecking=no -i {} ubuntu@{} "
+                    "\"echo Hello > /dev/null\"").format(args["key_path"], url)
+        try:
+            t = subprocess.run(command, shell=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return False
+        return t.returncode == 0
+
+    print("Checking the network connections...")
+    for url in instances:
+        if not try_ssh_instance(url):
+            print("Error: Cannot SSH to the instance '{}'. ".format(url) +
+                  "Did you run `./check-cluster.py`?")
+            return False
+    return True

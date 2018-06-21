@@ -79,7 +79,7 @@ to corresponding sub-directories.
 We can also retrieve the log files from the instances.
 
 ```bash
-../../scripts/retrieve-files.py --remote /tmp/run.log --local ./_logs
+../../scripts/retrieve-files.py --remote /tmp/stdout.log /tmp/stderr.log --local ./_logs
 ```
 
 The logs should be downloaded to `./_logs` directory.
