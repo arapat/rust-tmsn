@@ -124,7 +124,7 @@ fn main() {
 
     // Exit condition: Once all workers broadcasted the "finish" signals, the program can exit.
     while num_workers_finish < neighbors.len() {
-        println!("status, {}, {}, {}", num_discovered, num_workers_ready, num_workers_finish);
+        // println!("status, {}, {}, {}", num_discovered, num_workers_ready, num_workers_finish);
         if let Ok(message) = remote_data_recv.try_recv() {
             println!("received, {:?}", message);
             let (message_type, machine_id, data) =
