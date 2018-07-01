@@ -20,3 +20,9 @@
 ```
 
 4. Open the URL printed out in the Step 3.
+
+5. Shut down the instance
+
+```bash
+./terminate-cluster.py --name jupyter
+```
