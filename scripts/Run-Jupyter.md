@@ -19,4 +19,4 @@
 ./run-cluster.py -s script-examples/install-jupyter.sh --output
 ```
 
-4. Follow the instruction printed out in the Step 3.
+4. Open the URL printed out in the Step 3.
