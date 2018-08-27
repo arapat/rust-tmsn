@@ -37,7 +37,21 @@ def main(args):
         args["key"],
         args["name"]
     )
+    print("Creating the cluster...")
     subprocess.run(create_command, shell=True, check=True)
+    setup_security_group = """
+    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
+    aws ec2 authorize-security-group-ingress \
+        --group-name default \
+        --protocol tcp \
+        --port 8888 \
+        --cidr 0.0.0.0/0
+    """.format(
+        args["aws_access_key_id"],
+        args["aws_secret_access_key"],
+    )
+    print("Setting up security group...")
+    subprocess.run(setup_security_group, shell=True, check=True)
 
 
 if __name__ == '__main__':
