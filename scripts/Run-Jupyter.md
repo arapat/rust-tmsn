@@ -7,6 +7,8 @@
 ./create-cluster.py -c 1 --name jupyter
 ```
 
+To speicify a custom AMI image, append "--ami <ami_id>" to the cluster creation command above.
+
 2. Check the cluster is up
 
 ```bash
