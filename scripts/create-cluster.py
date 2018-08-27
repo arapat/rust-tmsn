@@ -51,10 +51,13 @@ if __name__ == '__main__':
     # parser.add_argument("-t", "--type",
     #                     required=True,
     #                     help="the type of the instances")
+    parser.add_argument("--ami",
+                         help="AMI type")
     parser.add_argument("--credential",
                         help="path to the credential file")
     args = vars(parser.parse_args())
-    args["ami"] = "ami-a4dc46db"
+    if args["ami"] is None:
+        args["ami"] = "ami-a4dc46db"
     args["type"] = "m3.xlarge"
     config = load_config(args)
     main(config)
