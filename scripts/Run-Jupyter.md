@@ -28,3 +28,9 @@ To speicify a custom AMI image, append "--ami <ami_id>" to the cluster creation 
 ```bash
 ./terminate-cluster.py --name jupyter
 ```
+
+6. To SSH into the first node, run
+
+```bash
+./ssh-headnode.py --name jupyter
+```
