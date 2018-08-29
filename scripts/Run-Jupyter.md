@@ -34,3 +34,18 @@ To speicify a custom AMI image, append "--ami <ami_id>" to the cluster creation 
 ```bash
 ./ssh-headnode.py --name jupyter
 ```
+
+## Setup and Diagnose
+
+1. To install awscli tool and upload the credentials to the instances, run
+
+```bash
+./setup-cluster.py --name jupyter
+```
+
+
+2. Print diagnose information to debugging
+
+```bash
+./diagnose.py
+```
