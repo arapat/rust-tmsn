@@ -6,6 +6,10 @@ from operator import itemgetter
 from common import load_config
 from common import query_status
 
+credential_format = """[default]
+aws_access_key_id = {}
+aws_secret_access_key = {}
+"""
 
 def main(args):
     all_status = query_status(args)
@@ -25,14 +29,25 @@ def main(args):
         if ready == 0:
             print("    Instances status: {}".format(status[0][0]))
             continue
-        print("Connecting to the first node.")
-        url = [t[1] for t in status if t[0] == "running"][0]
-        os.system("ssh -i {} ubuntu@{}".format(args["key_path"], url))
-        break
+        print("Setting up the cluster...")
+        urls = [t[1] for t in status if t[0] == "running"]
+        for url in urls:
+            print("Prepare to set up the instance `{}`".format(url))
+            os.system("echo '{}' | ssh -o \"StrictHostKeyChecking no\"  "
+                      "-i {} ubuntu@{} \"mkdir .aws && cat > .aws/credentials\"".format(
+                credential_format.format(args["aws_access_key_id"], args["aws_secret_access_key"]),
+                args["key_path"],
+                url,
+            ))
+            os.system("ssh -o \"StrictHostKeyChecking no\"  "
+                      "-i {} ubuntu@{} \"sudo apt-get install -y awscli\"".format(
+                args["key_path"],
+                url,
+            ))
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="SSH into the head node of a cluster")
+    parser = argparse.ArgumentParser(description="Setup an existing cluster")
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")
