@@ -62,9 +62,8 @@ if __name__ == '__main__':
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")
-    # parser.add_argument("-t", "--type",
-    #                     required=True,
-    #                     help="the type of the instances")
+    parser.add_argument("-t", "--type",
+                        help="the type of the instances")
     parser.add_argument("--ami",
                          help="AMI type")
     parser.add_argument("--credential",
@@ -72,6 +71,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     if args["ami"] is None:
         args["ami"] = "ami-a4dc46db"
-    args["type"] = "m3.xlarge"
+    if args["type"] is None:
+        args["type"] = "m3.xlarge"
     config = load_config(args)
     main(config)
