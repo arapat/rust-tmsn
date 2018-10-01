@@ -1,6 +1,6 @@
 [package]
-name = "rust_tmsn"
-version = "0.1.1"
+name = "tmsn"
+version = "0.1.2"
 authors = ["Julaiti Alafate <jalafate@gmail.com>"]
 
 [dependencies]

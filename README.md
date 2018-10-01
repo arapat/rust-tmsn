@@ -1,12 +1,12 @@
-# rust-tmsn
+# tmsn
 
-RustTMSN is a collection of general modules written in the RUST language, which implement the networking layer for TMSN (Tell Me Something New) distributed learning systems.
+TMSN is a collection of general modules written in the RUST language, which implement the networking layer for TMSN (Tell Me Something New) distributed learning systems.
 * Paper: [Tell me something new: A new framework for asynchronous Parallel Learning](https://arxiv.org/abs/1805.07483) / Julaiti Arapat and Yoav Freund, 2018
 
 ## Directory structure 
 * **src**: the source code
 * **doc**: documentation
-   * `doc/rust_tmsn/network/index.html` The root of the html documentation tree.
+   * `doc/tmsn/network/index.html` The root of the html documentation tree.
 * **target**: the executables.
 * **scripts**: Python scripts for creating and managing a cluster of `n` computers on AWS.
 
@@ -50,5 +50,5 @@ the scripts provided in the `/scripts` directory.
 A step by step instruction of running this example is provided
 in the document at `/examples/find-prime-nums-scripts/README.md`.
 
-## Use Rust-TMSN in your project
+## Use TMSN in your project
 * [UsingRustTMSN.md](./UsingRustTMSN.md)
