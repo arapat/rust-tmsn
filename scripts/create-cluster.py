@@ -14,9 +14,10 @@ def main(args):
               "Note: If you want to check the status of the cluster '{}', ".format(args["name"]) +
               "please use `./check-cluster`.")
         return
+    credential = 'AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}"'.format(
+        args["aws_access_key_id"], args["aws_secret_access_key"])
     create_command = """
-    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
-    aws ec2 run-instances \
+    {} aws ec2 run-instances \
         --image-id {} \
         --count {} \
         --instance-type {} \
@@ -29,8 +30,7 @@ def main(args):
               {{\"DeviceName\":\"/dev/xvdc\",\"VirtualName\":\"ephemeral1\"}}]' \
         --no-dry-run
     """.format(
-        args["aws_access_key_id"],
-        args["aws_secret_access_key"],
+        credential,
         args["ami"],
         args["count"],
         args["type"],
@@ -40,18 +40,20 @@ def main(args):
     print("Creating the cluster...")
     subprocess.run(create_command, shell=True, check=True)
     setup_security_group = """
-    AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
-    aws ec2 authorize-security-group-ingress \
+    {} aws ec2 authorize-security-group-ingress \
         --group-name default \
         --protocol tcp \
         --port 8888 \
-        --cidr 0.0.0.0/0
-    """.format(
-        args["aws_access_key_id"],
-        args["aws_secret_access_key"],
-    )
+        --cidr 0.0.0.0/0;
+    {} aws ec2 authorize-security-group-ingress \
+        --group-name default \
+        --protocol tcp \
+        --port 22 \
+        --cidr 0.0.0.0/0;
+    """.format(credential, credential)
     print("Setting up security group...")
-    subprocess.run(setup_security_group, shell=True, check=True)
+    subprocess.run(setup_security_group, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 if __name__ == '__main__':
