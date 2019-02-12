@@ -3,15 +3,15 @@ import argparse
 import os
 
 from operator import itemgetter
-from common import load_config
-from common import query_status
+from lib.common import load_config
+from lib.common import query_status
 
 credential_format = """[default]
 aws_access_key_id = {}
 aws_secret_access_key = {}
 """
 
-def main(args):
+def setup_cluster(args):
     all_status = query_status(args)
     if len(all_status) == 0:
         print("No instance found in the cluster '{}'. Quit.".format(args["name"]))
@@ -51,7 +51,9 @@ if __name__ == '__main__':
     parser.add_argument("--name",
                         required=True,
                         help="cluster name")
+    parser.add_argument("--region",
+                        help="Region name")
     parser.add_argument("--credential",
                         help="path to the credential file")
     config = load_config(vars(parser.parse_args()))
-    main(config)
+    setup_cluster(config)

@@ -3,8 +3,8 @@ import argparse
 import os
 import subprocess
 
-from common import load_config
-from common import check_connections
+from lib.common import load_config
+from lib.common import check_connections
 
 
 def check_exists(path):
@@ -15,7 +15,7 @@ def parse_file_path(path):
     return (path, path.rsplit('/', 1)[1])
 
 
-def main(args):
+def send_configs(args):
     if not check_exists(args["key_path"]):
         print("Error: File '{}' does not exist.".format(args["key_path"]))
         return
@@ -67,4 +67,4 @@ if __name__ == '__main__':
     args["neighbors"] = os.path.abspath("./neighbors.txt")
     args["base_path"] = "/home/ubuntu/workspace"
     config = load_config(args)
-    main(config)
+    send_configs(config)

@@ -5,6 +5,8 @@ import sys
 import yaml
 
 
+DEFAULT_AMI  = "ami-04959231eeb07d2cd"
+
 def load_config(args, config_path="~/.tmsn_config"):
     def load_credential(config):
         with open(config["credential"]) as f:
@@ -22,9 +24,31 @@ def load_config(args, config_path="~/.tmsn_config"):
         with open(config_path) as f:
             config = yaml.load(f)
     # Load arguments
+    if args["task"] is None:
+        print("'task' is not specified. Default task set to 'check'.")
+        config["task"] = "check"
+    if args["ami"] is None:
+        print("AMI is not specified. Default AMI set to '{}'".format(DEFAULT_AMI))
+        args["ami"] = DEFAULT_AMI
+    warning = False
+    output = ""
     for t in args:
-        if args[t] is not None:
+        if t not in config or args[t] is not None:
             config[t] = args[t]
+        if config[t] is None:
+            output += "{}:\t{} (WARNING)\n".format(t, config[t])
+            warning = True
+        else:
+            output += "{}:\t{}\n".format(t, config[t])
+    # Print arguments
+    print()
+    print('=' * 3, "Configuration", '=' * 3)
+    print(output)
+    if warning:
+        print('-' * 10)
+        print("WARN: Please check the configurations with the (WARNING) suffix above.")
+        print('-' * 10)
+        print()
     # Check the credential file
     if "credential" not in config or not config["credential"]:
         print("Error: Please provide the path to the credential file.")
@@ -41,10 +65,11 @@ def load_config(args, config_path="~/.tmsn_config"):
 def query_status(args):
     query_command = """
     AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
-    aws ec2 describe-instances \
-        --filter Name=tag:cluster-name,Values={} \
+    aws ec2 describe-instances --region {} \
+        --filter "Name=tag:cluster-name,Values={}" "Name=instance-state-name,Values=pending,running" \
         --query 'Reservations[*].Instances[*].[State.Name,PublicIpAddress]'
-    """.format(args["aws_access_key_id"], args["aws_secret_access_key"], args["name"])
+    """.format(
+        args["aws_access_key_id"], args["aws_secret_access_key"], args["region"], args["name"])
     result = subprocess.run(query_command, shell=True, check=True, stdout=subprocess.PIPE)
     output = result.stdout
     all_status = json.loads(output)

@@ -2,17 +2,18 @@
 import argparse
 import subprocess
 
-from common import load_config
-from common import query_status
+from lib.common import load_config
+from lib.common import query_status
 
 
-def main(args):
+def diagnose(args):
     check_security_group = """
     AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}" \
-    aws ec2 describe-security-groups --group-names default
+    aws ec2 describe-security-groups --region {} --group-names default
     """.format(
         args["aws_access_key_id"],
         args["aws_secret_access_key"],
+        args["region"],
     )
     print("Checking security group...")
     subprocess.run(check_security_group, shell=True, check=True)
@@ -24,6 +25,8 @@ if __name__ == '__main__':
                         help="cluster name")
     parser.add_argument("--credential",
                         help="path to the credential file")
+    parser.add_argument("--region",
+                        help="Region name")
     args = vars(parser.parse_args())
     config = load_config(args)
-    main(config)
+    diagnose(config)

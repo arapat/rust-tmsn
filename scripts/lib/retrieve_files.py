@@ -3,15 +3,15 @@ import argparse
 import os
 import subprocess
 
-from common import load_config
-from common import check_connections
+from lib.common import load_config
+from lib.common import check_connections
 
 
 def check_exists(path):
     return os.path.isfile(path)
 
 
-def main(args):
+def retrieve_file(args):
     if not check_exists(args["key_path"]):
         print("Error: File '{}' does not exist.".format(args["key_path"]))
         return
@@ -61,4 +61,4 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     args["neighbors"] = os.path.abspath("./neighbors.txt")
     config = load_config(args)
-    main(config)
+    retrieve_file(config)

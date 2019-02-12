@@ -1,23 +1,29 @@
 #!/usr/bin/env python
 import argparse
 import subprocess
+import json
 
-from common import load_config
-from common import query_status
+from lib.common import load_config
+from lib.common import query_status
+from lib.common import DEFAULT_AMI
 
 
-def main(args):
+DEFAULT_TYPE = "m3.xlarge"
+
+
+def create_cluster(args):
     all_status = query_status(args)
     if len(all_status):
         print("Error: A cluster with the name '{}' exists. ".format(args["name"]) +
               "Please choose a different cluster name.\n" +
               "Note: If you want to check the status of the cluster '{}', ".format(args["name"]) +
-              "please use `./check-cluster`.")
+              "please use `./aws-jupyter.py check` or `./check-cluster.py`.")
         return
     credential = 'AWS_ACCESS_KEY_ID="{}" AWS_SECRET_ACCESS_KEY="{}"'.format(
         args["aws_access_key_id"], args["aws_secret_access_key"])
     create_command = """
     {} aws ec2 run-instances \
+        --region {} \
         --image-id {} \
         --count {} \
         --instance-type {} \
@@ -31,6 +37,7 @@ def main(args):
         --no-dry-run
     """.format(
         credential,
+        args["region"],
         args["ami"],
         args["count"],
         args["type"],
@@ -38,22 +45,31 @@ def main(args):
         args["name"]
     )
     print("Creating the cluster...")
-    subprocess.run(create_command, shell=True, check=True)
+    p = subprocess.run(create_command, shell=True, check=True, stdout=subprocess.PIPE)
+    output = json.loads(p.stdout)
+    print("Launched instances:")
+    for instance in output["Instances"]:
+        print("{} ({})".format(instance["InstanceId"], instance["InstanceLifecycle"]))
+    print()
+
     setup_security_group = """
     {} aws ec2 authorize-security-group-ingress \
+        --region {} \
         --group-name default \
         --protocol tcp \
         --port 8888 \
         --cidr 0.0.0.0/0;
     {} aws ec2 authorize-security-group-ingress \
+        --region {} \
         --group-name default \
         --protocol tcp \
         --port 22 \
         --cidr 0.0.0.0/0;
-    """.format(credential, credential)
+    """.format(credential, args["region"], credential, args["region"])
     print("Setting up security group...")
     subprocess.run(setup_security_group, shell=True,
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print("Done.")
 
 
 if __name__ == '__main__':
@@ -66,14 +82,19 @@ if __name__ == '__main__':
                         help="cluster name")
     parser.add_argument("-t", "--type",
                         help="the type of the instances")
+    parser.add_argument("--region",
+                        help="Region name")
     parser.add_argument("--ami",
                          help="AMI type")
     parser.add_argument("--credential",
                         help="path to the credential file")
     args = vars(parser.parse_args())
     if args["ami"] is None:
-        args["ami"] = "ami-a4dc46db"
+        print("AMI is not specified. Default AMI set to '{}'".format(DEFAULT_AMI))
+        args["ami"] = DEFAULT_AMI
     if args["type"] is None:
-        args["type"] = "m3.xlarge"
+        print("Instance type is not specified. Default instance type set to '{}'".format(
+            DEFAULT_TYPE))
+        args["type"] = DEFAULT_TYPE
     config = load_config(args)
-    main(config)
+    create_cluster(config)

@@ -1,9 +1,9 @@
-sudo apt-get update
-sudo apt-get install -y python3-pip
-pip3 install jupyter
+# sudo apt-get update
+# sudo apt-get install -y python3-pip
+# pip3 install jupyter
 killall jupyter-notebook
-/home/ubuntu/.local/bin/jupyter notebook --generate-config
-echo "c.NotebookApp.ip = '0.0.0.0'" >> /home/ubuntu/.jupyter/jupyter_notebook_config.py
+# /home/ubuntu/.local/bin/jupyter notebook --generate-config
+# echo "c.NotebookApp.ip = '0.0.0.0'" >> /home/ubuntu/.jupyter/jupyter_notebook_config.py
 sleep 1
 nohup /home/ubuntu/.local/bin/jupyter notebook --no-browser --port=8888 < /dev/null > /dev/null 2>&1 &
 sleep 2
