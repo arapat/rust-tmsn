@@ -28,7 +28,7 @@ def create_cluster(args):
         --count {} \
         --instance-type {} \
         --key-name {} \
-        --instance-market-options 'MarketType=spot,SpotOptions={{MaxPrice='0.3'}}' \
+        --instance-market-options 'MarketType=spot,SpotOptions={{MaxPrice='3.0'}}' \
         --tag-specifications 'ResourceType=instance,Tags=[{{Key=cluster-name,Value={}}}]' \
         --associate-public-ip-address \
         --block-device-mappings \
