@@ -90,6 +90,6 @@ def check_connections(instances, args, timeout=2):
     for url in instances:
         if not try_ssh_instance(url):
             print("Error: Cannot SSH to the instance '{}'. ".format(url) +
-                  "Did you run `./check-cluster.py`?")
+                  "Try again later, or if you haven't already, run `check` command")
             return False
     return True

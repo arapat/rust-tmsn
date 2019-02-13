@@ -16,3 +16,5 @@ echo
 URL=$(dig +short myip.opendns.com @resolver1.opendns.com)
 echo "  http"$(/home/ubuntu/.local/bin/jupyter notebook list | grep -Po '(?<=http).*(?=::)' | sed "s/0.0.0.0/$URL/")
 echo
+echo "(If the URL didn't show up, please wait a few seconds and try again.)"
+echo
