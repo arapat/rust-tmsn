@@ -57,7 +57,7 @@ if __name__ == "__main__":
     elif config["task"] == "check":
         status = check_cluster(config)
         if status is not None and 0 < status[0] and status[0] == status[1]:
-            print("Cluster is ready. I will now start Jupyter notebook.")
+            print("Cluster is running (yet might still being initialized). I will try to start Jupyter notebook now.")
             config["script"] = "./script-examples/install-jupyter.sh"
             config["output"] = True
             run_cluster(config)
