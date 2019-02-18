@@ -1,3 +1,11 @@
+# Mount SSD
+DISK="/dev/$(lsblk | grep -Eo '^nvme[^ ]+' | head -1)"
+if [ "$(blkid -o value -s TYPE $DISK)" != "ext4" ]; then
+    yes | sudo mkfs.ext4 $DISK
+fi
+sudo mkdir -p /ssd
+sudo mount $DISK /ssd
+
 # sudo apt-get update
 # sudo apt-get install -y python3-pip
 # pip3 install jupyter
