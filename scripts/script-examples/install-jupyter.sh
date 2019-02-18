@@ -5,6 +5,7 @@ if [ "$(blkid -o value -s TYPE $DISK)" != "ext4" ]; then
 fi
 sudo mkdir -p /ssd
 sudo mount $DISK /ssd
+sudo chown -R ubuntu /ssd
 
 # sudo apt-get update
 # sudo apt-get install -y python3-pip
