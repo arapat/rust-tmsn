@@ -37,6 +37,7 @@ Run `./aws-jupyter.py -h` will print the help message of the script.
 2. Create a cluster - run `./aws-jupyter.py create -c <N> --name <NAME>` to create a cluster
 named <NAME> with <N> nodes. Later the cluster name is required to check the cluster status and
 to terminate the cluster.
+If on-demand instances are needed, please append `--ondemand` option.
 3. Check a cluster - run `./aws-jupyter.py check --name <NAME>` to check the status of a cluster.
 If the cluster is ready, you will see the URL to the Jupyter notebook.
 4. Terminate a cluster - run `./aws-jupyter.py terminate --name <NAME>` to terminate a cluster.

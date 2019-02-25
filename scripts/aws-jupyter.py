@@ -25,6 +25,9 @@ if __name__ == "__main__":
                         help="region name")
     parser.add_argument("-t", "--type",
                         help="the type of the instances")
+    parser.add_argument("--ondemand",
+                        action='store_true',
+                        help="use on-demand instances")
     parser.add_argument("--ami",
                          help="AMI type")
     parser.add_argument("--credential",

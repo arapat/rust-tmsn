@@ -28,7 +28,6 @@ def create_cluster(args):
         --count {} \
         --instance-type {} \
         --key-name {} \
-        --instance-market-options 'MarketType=spot,SpotOptions={{MaxPrice='3.0'}}' \
         --tag-specifications 'ResourceType=instance,Tags=[{{Key=cluster-name,Value={}}}]' \
         --associate-public-ip-address \
         --block-device-mappings \
@@ -44,12 +43,21 @@ def create_cluster(args):
         args["key"],
         args["name"]
     )
+    if not args["ondemand"]:
+        create_command = create_command.strip() + \
+            """ --instance-market-options 'MarketType=spot,SpotOptions={MaxPrice='3.0'}'"""
+        print("We will use spot instances.")
+    else:
+        print("We will use on-demand instances.")
     print("Creating the cluster...")
     p = subprocess.run(create_command, shell=True, check=True, stdout=subprocess.PIPE)
     output = json.loads(p.stdout)
     print("Launched instances:")
     for instance in output["Instances"]:
-        print("{} ({})".format(instance["InstanceId"], instance["InstanceLifecycle"]))
+        if args["ondemand"]:
+            print("{} (on demand)".format(instance["InstanceId"]))
+        else:
+            print("{} ({})".format(instance["InstanceId"], instance["InstanceLifecycle"]))
     print()
 
     setup_security_group = """
