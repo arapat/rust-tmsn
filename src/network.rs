@@ -154,6 +154,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
 }
 
 
+// Start all sender routines
 fn start_sender<T: 'static + Send + Serialize>(
         name: String, port: u16, model_recv: Receiver<T>,
         remote_ip_send: Option<Sender<SocketAddr>>) {
@@ -167,13 +168,14 @@ fn start_sender<T: 'static + Send + Serialize>(
         sender_listener(name_clone, port, arc_w, remote_ip_send);
     });
 
-    // Send local data to the remote connections accepted so far
+    // Repeatedly sending local data out to the remote connections
     spawn(move|| {
         sender(name, streams_arc, model_recv);
     });
 }
 
 
+// Start all receiver routines
 fn start_receiver<T: 'static + Send + DeserializeOwned>(
         name: String, port: u16, model_send: Sender<T>, remote_ip_recv: Receiver<SocketAddr>) {
     spawn(move|| {
@@ -182,14 +184,14 @@ fn start_receiver<T: 'static + Send + DeserializeOwned>(
 }
 
 
+// Sender listener is responsible for:
+//     1. Add new incoming stream to sender (via streams RwLock)
+//     2. Send new incoming address to receiver so that it connects to the new machine
 fn sender_listener(
         name: String,
         port: u16,
         sender_streams: StreamLockVec,
         receiver_ips: Option<Sender<SocketAddr>>) {
-    // Sender listener is responsible for:
-    //     1. Add new incoming stream to sender (via streams RwLock)
-    //     2. Send new incoming address to receiver so that it connects to the new machine
     info!("{} entering sender listener", name);
     let local_addr: SocketAddr =
         (String::from("0.0.0.0:") + port.to_string().as_str()).parse().expect(
@@ -227,6 +229,7 @@ fn sender_listener(
 }
 
 
+// If a new neighbor occurs, launch receiver to receive data from it
 fn receivers_launcher<T: 'static + Send + DeserializeOwned>(
         name: String, port: u16, model_send: Sender<T>, remote_ip_recv: Receiver<SocketAddr>) {
     info!("now entering receivers listener");
@@ -262,6 +265,7 @@ fn receivers_launcher<T: 'static + Send + DeserializeOwned>(
 }
 
 
+// Core sender routine
 fn sender<T: Serialize>(name: String, streams: StreamLockVec, chan: Receiver<T>) {
     info!("Sender has started.");
 
@@ -309,6 +313,7 @@ fn sender<T: Serialize>(name: String, streams: StreamLockVec, chan: Receiver<T>)
 }
 
 
+// Core receiver routine
 fn receiver<T: DeserializeOwned>(
         name: String, remote_ip: SocketAddr, mut stream: BufStream<TcpStream>, chan: Sender<T>) {
     info!("Receiver started from {} to {}", name, remote_ip);
