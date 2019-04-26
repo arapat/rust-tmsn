@@ -154,7 +154,33 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
 }
 
 
-// Start all sender routines
+pub fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
+        name: &str, port: u16, data_local: Receiver<T>) {
+    info!("Starting the network (send only) module.");
+    start_sender(name.to_string(), port, data_local, None);
+}
+
+
+pub fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>(
+        name: &str, remote_ips: &Vec<String>, port: u16, data_remote: Sender<T>) {
+    info!("Starting the network (receive only) module.");
+    let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
+    // receiver initiates remote connections
+    start_receiver(name.to_string(), port, data_remote, ip_recv);
+
+    remote_ips.iter().for_each(|ip| {
+        let socket_addr: SocketAddr =
+            (ip.clone() + ":" + port.to_string().as_str()).parse().expect(
+                &format!("Failed to parse initial remote IP `{}:{}`.", ip, port)
+            );
+        ip_send.send(socket_addr).expect(
+            "Failed to send the initial remote IP to the receivers listener."
+        );
+    });
+}
+
+
+// Start all sender routines - start local sender and also accept remote senders
 fn start_sender<T: 'static + Send + Serialize>(
         name: String, port: u16, model_recv: Receiver<T>,
         remote_ip_send: Option<Sender<SocketAddr>>) {
@@ -184,7 +210,7 @@ fn start_receiver<T: 'static + Send + DeserializeOwned>(
 }
 
 
-// Sender listener is responsible for:
+// Sender listener (i.e. the listener of the sender) is responsible for:
 //     1. Add new incoming stream to sender (via streams RwLock)
 //     2. Send new incoming address to receiver so that it connects to the new machine
 fn sender_listener(
@@ -265,9 +291,9 @@ fn receivers_launcher<T: 'static + Send + DeserializeOwned>(
 }
 
 
-// Core sender routine
+// Core sender routine - 1 to many
 fn sender<T: Serialize>(name: String, streams: StreamLockVec, chan: Receiver<T>) {
-    info!("Sender has started.");
+    info!("1-to-many Sender has started.");
 
     let mut idx = 0;
     loop {
