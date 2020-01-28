@@ -1,7 +1,7 @@
 # tmsn
 
 TMSN is a collection of general modules written in the RUST language, which implement the networking layer for TMSN (Tell Me Something New) distributed learning systems.
-* Paper: [Tell me something new: A new framework for asynchronous Parallel Learning](https://arxiv.org/abs/1805.07483) / Julaiti Arapat and Yoav Freund, 2018
+* Paper: [Tell me something new: A new framework for asynchronous Parallel Learning](https://arxiv.org/abs/1805.07483) / Julaiti Alafate and Yoav Freund, 2018
 
 ## Directory structure 
 * **src**: the source code
