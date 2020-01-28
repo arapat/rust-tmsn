@@ -129,16 +129,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
     }
     // receiver initiates remote connections
     receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
-
-    init_remote_ips.iter().for_each(|ip| {
-        let socket_addr: SocketAddr =
-            (ip.clone() + ":" + port.to_string().as_str()).parse().expect(
-                &format!("Failed to parse initial remote IP `{}:{}`.", ip, port)
-            );
-        ip_send.send(socket_addr).expect(
-            "Failed to send the initial remote IP to the receivers listener."
-        );
-    });
+    send_initial_ips(init_remote_ips, ip_send, port);
 }
 
 
@@ -153,9 +144,12 @@ pub fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>
         name: &str, remote_ips: &Vec<String>, port: u16, data_remote: Sender<T>) {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
-    // receiver initiates remote connections
     receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
+    send_initial_ips(remote_ips, ip_send, port);
+}
 
+
+fn send_initial_ips(remote_ips: &Vec<String>, ip_send: Sender<SocketAddr>, port: u16) {
     remote_ips.iter().for_each(|ip| {
         let socket_addr: SocketAddr =
             (ip.clone() + ":" + port.to_string().as_str()).parse().expect(
