@@ -26,7 +26,7 @@ impl TmsnNetwork {
     }
 
     pub fn recv(&mut self) -> PyResult<Vec<u8>> {
-        let ret = self.remote_recv.as_mut().unwrap().recv();
+        let ret = self.remote_recv.as_mut().unwrap().try_recv();
         // TODO: handle exception?
         Ok(ret.unwrap())
     }
