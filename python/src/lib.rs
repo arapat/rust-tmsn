@@ -34,7 +34,7 @@ impl TmsnNetwork {
 
     /// receive a packet
     /// Example: packet = network.recv()
-    /// If there is no new packet, the method returns a empty list (i.e., [])
+    /// If there is no new packet, the method returns an empty list (i.e., [])
     pub fn recv(&mut self) -> PyResult<Vec<u8>> {
         let ret = self.remote_recv.as_mut().unwrap().try_recv();
         // TODO: handle exception?
