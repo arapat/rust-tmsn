@@ -42,14 +42,45 @@ impl TmsnNetwork {
 }
 
 
+/// Starts a broadcast network using a subscription list.
+///
+/// Example: start_network("machine_name", ["remote_ip_1", "remote_ip_2"], 8080)
+///
+/// The network recieves as input a sender and a receiver of two channels, respectively,
+/// one for incoming packets and the other for outgoing packets.
+///
+/// Each machine maintains a list of subscriptions. The list defines
+/// the IPs that this machine is listening to.
+/// Initially, this list is provided as the parameter `init_remote_ips`
+/// of the function `start_network`.
+///
+/// The network structure between the machines are decided by your program, specifically by
+/// explicitly setting the list of IPs to be subscribed from each machine.
+///
+/// ## Parameters
+/// * `name` - the local computer name.
+/// * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
+/// * `port` - the port number that the machines in the network are listening to.
+/// `port` has to be the same value for all machines.
+///
+/// Design
+///
+/// Initially, the local computer only connects to the computers specificed by the
+/// `init_remote_ips` vector in the function parameters (neighbors), and *receive* data from
+/// these computers.
+/// Specifically, a **Receiver** is created for each neighbor. The connection is initiated by the
+/// Receiver. The number of Receivers on a computer is always equal to the number of neighbors.
+/// On the other end, only one **Sender** is created for a computer, which send data to all other
+/// computers that connected to it.
+///
 #[pyfunction]
 pub fn start_network(
-    name: String, init_remote_ips: Vec<String>, port: u16, is_two_way: bool,
+    name: String, init_remote_ips: Vec<String>, port: u16,
 ) -> PyResult<TmsnNetwork> {
     let (remote_s, remote_r) = mpsc::channel();
     let (local_s, local_r) = mpsc::channel();
     let is_network_on = network::start_network(
-        name.as_str(), &init_remote_ips, port, is_two_way, remote_s, local_r);
+        name.as_str(), &init_remote_ips, port, false, remote_s, local_r);
     if is_network_on.is_err() {
         return Err(AddrInUse::py_err(is_network_on.err().unwrap()));
     }
@@ -61,6 +92,9 @@ pub fn start_network(
 }
 
 
+/// Start the network in the send-out-data only mode.
+///
+/// Example: start_network("machine_name", 8080)
 #[pyfunction]
 pub fn start_network_only_send(name: String, port: u16) -> PyResult<TmsnNetwork> {
     let (local_s, local_r) = mpsc::channel();
@@ -76,6 +110,11 @@ pub fn start_network_only_send(name: String, port: u16) -> PyResult<TmsnNetwork>
 }
 
 
+/// Start the network in the receive-in-data only mode.
+/// The addresses of the remote machines to be listened to needs to be provided in
+/// the list of parameters.
+///
+/// Example: start_network("machine_name", ["remote_ip_1", "remote_ip_2"], 8080)
 #[pyfunction]
 pub fn start_network_only_recv(
     name: String, remote_ips: Vec<String>, port: u16,
@@ -92,6 +131,13 @@ pub fn start_network_only_recv(
 }
 
 
+/// Create the network connection in a cluster.
+/// Please see the description of the methods for more details.
+///
+/// Methods:
+///     - start_network
+///     - start_network_only_send
+///     - start_network_only_recv
 #[pymodule]
 fn tmsn(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(start_network))?;
