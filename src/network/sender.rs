@@ -18,21 +18,33 @@ type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 // Start all sender routines - start local sender and also accept remote senders
 pub fn start_sender<T: 'static + Send + Serialize>(
         name: String, port: u16, model_recv: Receiver<T>,
-        remote_ip_send: Option<Sender<SocketAddr>>) {
+        remote_ip_send: Option<Sender<SocketAddr>>) -> Result<(), &'static str> {
     let streams: Vec<BufStream<TcpStream>> = vec![];
     let streams_arc = Arc::new(RwLock::new(streams));
 
     let arc_w = streams_arc.clone();
     let name_clone = name.clone();
     // accepts remote connections
+    let listener = {
+        let local_addr: SocketAddr =
+            (String::from("0.0.0.0:") + port.to_string().as_str()).parse().expect(
+                &format!("Cannot parse the port number `{}`.", port)
+            );
+        let listener = TcpListener::bind(local_addr);
+        if listener.is_err() {
+            return Err("Failed to bind the listening port");
+        }
+        listener.unwrap()
+    };
     spawn(move|| {
-        sender_listener(name_clone, port, arc_w, remote_ip_send);
+        sender_listener(name_clone, arc_w, remote_ip_send, listener);
     });
 
     // Repeatedly sending local data out to the remote connections
     spawn(move|| {
         sender(name, streams_arc, model_recv);
     });
+    Ok(())
 }
 
 
@@ -41,16 +53,10 @@ pub fn start_sender<T: 'static + Send + Serialize>(
 //     2. Send new incoming address to receiver so that it connects to the new machine
 fn sender_listener(
         name: String,
-        port: u16,
         sender_streams: StreamLockVec,
-        receiver_ips: Option<Sender<SocketAddr>>) {
+        receiver_ips: Option<Sender<SocketAddr>>,
+        listener: TcpListener) {
     info!("{} entering sender listener", name);
-    let local_addr: SocketAddr =
-        (String::from("0.0.0.0:") + port.to_string().as_str()).parse().expect(
-            &format!("Cannot parse the port number `{}`.", port)
-        );
-    let listener = TcpListener::bind(local_addr)
-        .expect(&format!("Failed to bind the listening port `{}`.", port));
     for stream in listener.incoming() {
         match stream {
             Err(_) => error!("Sender received an error connection."),
