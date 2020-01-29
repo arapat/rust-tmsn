@@ -25,11 +25,16 @@ pub struct TmsnNetwork {
 
 #[pymethods]
 impl TmsnNetwork {
+    /// send out a packet
+    /// Example: network.send(packet)
     pub fn send(&mut self, packet: &[u8]) -> PyResult<()> {
         let ret = self.local_sender.as_mut().unwrap().send(packet.to_vec());
         Ok(ret.unwrap())
     }
 
+    /// receive a packet
+    /// Example: packet = network.recv()
+    /// If there is no new packet, the method returns a empty list (i.e., [])
     pub fn recv(&mut self) -> PyResult<Vec<u8>> {
         let ret = self.remote_recv.as_mut().unwrap().try_recv();
         // TODO: handle exception?
