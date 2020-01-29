@@ -2,13 +2,18 @@ extern crate pyo3;
 extern crate tmsn;
 
 use pyo3::prelude::*;
+use pyo3::create_exception;
 use pyo3::wrap_pyfunction;
+use pyo3::exceptions::Exception;
 
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
 use tmsn::network;
+
+
+create_exception!(tmsn, AddrInUse, Exception);
 
 
 #[pyclass]
@@ -28,7 +33,11 @@ impl TmsnNetwork {
     pub fn recv(&mut self) -> PyResult<Vec<u8>> {
         let ret = self.remote_recv.as_mut().unwrap().try_recv();
         // TODO: handle exception?
-        Ok(ret.unwrap())
+        if ret.is_ok() {
+            Ok(ret.unwrap())
+        } else {
+            Ok(vec![])
+        }
     }
 }
 
@@ -39,8 +48,11 @@ pub fn start_network(
 ) -> PyResult<TmsnNetwork> {
     let (remote_s, remote_r) = mpsc::channel();
     let (local_s, local_r) = mpsc::channel();
-    network::start_network(
+    let is_network_on = network::start_network(
         name.as_str(), &init_remote_ips, port, is_two_way, remote_s, local_r);
+    if is_network_on.is_err() {
+        return Err(AddrInUse::py_err(is_network_on.err().unwrap()));
+    }
     let tmsn = TmsnNetwork {
         remote_recv: Some(remote_r),
         local_sender: Some(local_s),
@@ -52,7 +64,10 @@ pub fn start_network(
 #[pyfunction]
 pub fn start_network_only_send(name: String, port: u16) -> PyResult<TmsnNetwork> {
     let (local_s, local_r) = mpsc::channel();
-    network::start_network_only_send(name.as_str(), port, local_r);
+    let is_network_on = network::start_network_only_send(name.as_str(), port, local_r);
+    if is_network_on.is_err() {
+        return Err(AddrInUse::py_err(is_network_on.err().unwrap()));
+    }
     let tmsn = TmsnNetwork {
         remote_recv: None,
         local_sender: Some(local_s),
@@ -66,7 +81,9 @@ pub fn start_network_only_recv(
     name: String, remote_ips: Vec<String>, port: u16,
 ) -> PyResult<TmsnNetwork> {
     let (remote_s, remote_r) = mpsc::channel();
-    network::start_network_only_recv(name.as_str(), &remote_ips, port, remote_s);
+    let is_network_on =
+        network::start_network_only_recv(name.as_str(), &remote_ips, port, remote_s);
+    is_network_on.unwrap();
     let tmsn = TmsnNetwork {
         remote_recv: Some(remote_r),
         local_sender: None,
@@ -76,10 +93,11 @@ pub fn start_network_only_recv(
 
 
 #[pymodule]
-fn tmsn(_py: Python, m: &PyModule) -> PyResult<()> {
+fn tmsn(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(start_network))?;
     m.add_wrapped(wrap_pyfunction!(start_network_only_recv))?;
     m.add_wrapped(wrap_pyfunction!(start_network_only_send))?;
+    m.add("AddrInUse", py.get_type::<AddrInUse>())?;
 
     Ok(())
 }
