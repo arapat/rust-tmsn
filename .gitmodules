@@ -1,0 +1,3 @@
+[submodule "aws-jupyter"]
+	path = aws-jupyter
+	url = git@github.com:arapat/aws-jupyter.git
