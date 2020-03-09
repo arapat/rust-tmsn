@@ -4,6 +4,16 @@ This module creates the network connection in a cluster for the TMSN-like commun
 
 Please see the demo in [the example Jupyter notebook](../examples/python-demo.ipynb).
 
+## Install (beta)
+
+Install with `pip`:
+
+```
+pip install tmsn-py
+```
+
+The installation is only tested with Python 3.7 on Linux and MacOS. If it doesn't work on your environment, please let me know.
+
 ## Usages
 
 ### Use a network
