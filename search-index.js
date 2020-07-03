@@ -1,0 +1,4 @@
+var searchIndex = JSON.parse('{\
+"tmsn":{"doc":"`rust_tmsn` is a collection of general modules to help…","i":[[0,"network","tmsn","Establish network connections between the workers in the…",null,null],[5,"start_network","tmsn::network","Starts a broadcast network using a subscription list.",null,[[["receiver",3],["vec",3],["sender",3],["send",8],["deserializeowned",8],["serialize",8]],["result",4]]],[5,"start_network_only_send","","",null,[[["receiver",3],["send",8],["deserializeowned",8],["serialize",8]],["result",4]]],[5,"start_network_only_recv","","",null,[[["vec",3],["sender",3],["send",8],["deserializeowned",8],["serialize",8]],["result",4]]]],"p":[]}\
+}');
+addSearchOptions(searchIndex);initSearch(searchIndex);
