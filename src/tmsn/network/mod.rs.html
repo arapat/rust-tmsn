@@ -141,36 +141,6 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">mod</span> <span class="ident">sender</span>;
 <span class="kw">mod</span> <span class="ident">receiver</span>;
@@ -239,36 +209,6 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// The network structure between the machines are decided by your program, specifically by</span>
 <span class="doccomment">/// explicitly setting the list of IPs to be subscribed from each machine.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// ## Example</span>
-<span class="doccomment">/// ```</span>
-<span class="doccomment">/// use std::sync::mpsc;</span>
-<span class="doccomment">/// use std::thread::sleep;</span>
-<span class="doccomment">/// use rust_tmsn::network::start_network;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// use std::time::Duration;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// // Remote data queue, where the data received from network would be put</span>
-<span class="doccomment">/// let (remote_data_send, remote_data_recv) = mpsc::channel();</span>
-<span class="doccomment">/// // Local data queue, where the data generated locally would be put</span>
-<span class="doccomment">/// let (local_data_send, local_data_recv) = mpsc::channel();</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// let network = vec![String::from(&quot;127.0.0.1&quot;)];</span>
-<span class="doccomment">/// start_network(&quot;local&quot;, &amp;network, 8000, false, remote_data_send, local_data_recv);</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// // Put a test message in the local_data</span>
-<span class="doccomment">/// let message = String::from(&quot;Hello, this is a test message.&quot;);</span>
-<span class="doccomment">/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready</span>
-<span class="doccomment">/// local_data_send.send(message.clone()).unwrap();</span>
-<span class="doccomment">/// println!(&quot;Sent out this message: {}&quot;, message);</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// // The message above is supposed to send out to all the neighbors computers specified</span>
-<span class="doccomment">/// // in the `network` vector, which contains only the localhost.</span>
-<span class="doccomment">/// // The network module running on the local host should have received the message</span>
-<span class="doccomment">/// // and put it into the remote data queue.</span>
-<span class="doccomment">/// let data_received = remote_data_recv.recv().unwrap();</span>
-<span class="doccomment">/// assert_eq!(data_received, message);</span>
-<span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ## Design</span>
 <span class="doccomment">///</span>
