@@ -140,6 +140,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
 }
 
 
+#[allow(dead_code)]
 pub fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, port: u16, data_local: Receiver<T>) -> Result<(), &'static str> {
     info!("Starting the network (send only) module.");
@@ -147,6 +148,7 @@ pub fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>
 }
 
 
+#[allow(dead_code)]
 pub fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, remote_ips: &Vec<String>, port: u16, data_remote: Sender<T>,
 ) -> Result<(), &'static str> {
