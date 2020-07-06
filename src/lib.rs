@@ -29,6 +29,29 @@ use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
 
+/// A structure for communicating over the network in an asynchronous, non-blocking manner
+///
+/// Example:
+/// ```
+/// use tmsn::Network;
+/// use std::thread::sleep;
+/// use std::time::Duration;
+///
+/// let mut network = Network::new("local", 8080, true);
+/// let neighbors = vec![String::from("127.0.0.1")];
+/// // start the network
+/// network.start_network(&neighbors).unwrap();
+/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+///
+/// // To send out a text message
+/// let message = String::from("Hello, this is a test message.");
+/// network.send(message.clone()).unwrap();
+///
+/// // The message above is supposed to send out to all the neighbors computers specified
+/// // in the `network` vector, which contains only the localhost.
+/// let data_received = network.receive().unwrap();
+/// assert_eq!(data_received, message);
+/// ```
 pub struct Network<T> {
     name: String,
     port: u16,
@@ -36,7 +59,7 @@ pub struct Network<T> {
     inbound_put: Sender<T>,
     inbound_pop: Receiver<T>,
     outbound_put: Sender<T>,
-    outbound_pop: Receiver<T>,
+    outbound_pop: Option<Receiver<T>>,
 }
 
 
@@ -57,21 +80,21 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
             inbound_put: inbound_put,
             inbound_pop: inbound_pop,
             outbound_put: outbound_put,
-            outbound_pop: outbound_pop,
+            outbound_pop: Some(outbound_pop),
         }
     }
 
     /// Start the network
     /// Parameter:
     ///   * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
-    pub fn start_network(self, init_remote_ips: &Vec<String>) -> Result<(), &'static str> {
+    pub fn start_network(&mut self, init_remote_ips: &Vec<String>) -> Result<(), &'static str> {
         network::start_network(
-            self.name.as_str(), init_remote_ips, self.port, self.always_confirm, self.inbound_put,
-            self.outbound_pop)
+            self.name.as_str(), init_remote_ips, self.port, self.always_confirm,
+            self.inbound_put.clone(), self.outbound_pop.take().unwrap())
     }
 
     /// Send out a packet
-    pub fn send(self, packet: T) -> Result<(), ()> {
+    pub fn send(&self, packet: T) -> Result<(), ()> {
         let ret = self.outbound_put.send(packet);
         if ret.is_ok() {
             Ok(())
@@ -81,7 +104,7 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     }
 
     /// Receive a packet
-    pub fn receive(self) -> Result<T, ()> {
+    pub fn receive(&self) -> Result<T, ()> {
         let ret = self.inbound_pop.recv();
         if ret.is_ok() {
             Ok(ret.unwrap())
@@ -92,5 +115,30 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
 
     /// Return a summary of the network communication
     pub fn get_health() {
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::Network;
+    use std::thread::sleep;
+    use std::time::Duration;
+
+    #[test]
+    fn test() {
+        let mut network = Network::new("local", 8080, true);
+        let neighbors = vec![String::from("127.0.0.1")];
+        network.start_network(&neighbors).unwrap();
+        sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+
+        // To send out a text message
+        let message = String::from("Hello, this is a test message.");
+        network.send(message.clone()).unwrap();
+
+        // The message above is supposed to send out to all the neighbors computers specified
+        // in the `network` vector, which contains only the localhost.
+        let data_received = network.receive().unwrap();
+        assert_eq!(data_received, message);
     }
 }
