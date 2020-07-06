@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["start_network","Starts a broadcast network using a subscription list."],["start_network_only_recv",""],["start_network_only_send",""]]});
