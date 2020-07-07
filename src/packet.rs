@@ -22,13 +22,13 @@ pub enum PacketType {
 #[derive(Serialize, Deserialize)]
 pub struct Packet<T> {
     /// Actual workload of the packet
-    content: Option<T>,
+    pub content: Option<T>,
     /// Packet sent out time
-    sent_time: SystemTime,
+    pub sent_time: SystemTime,
     /// Packet receive time
-    receive_time: Option<SystemTime>,
+    pub receive_time: Option<SystemTime>,
     /// Type of the packet
-    packet_type: PacketType,
+    pub packet_type: PacketType,
 }
 
 
