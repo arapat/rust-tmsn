@@ -248,7 +248,7 @@
         <span class="kw">return</span> <span class="ident">is_sender_on</span>;
     }
     <span class="comment">// receiver initiates remote connections</span>
-    <span class="comment">// TTT receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);</span>
+    <span class="comment">// receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);</span>
     <span class="ident">send_initial_ips</span>(<span class="ident">init_remote_ips</span>, <span class="ident">ip_send</span>, <span class="ident">port</span>);
     <span class="prelude-val">Ok</span>(())
 }

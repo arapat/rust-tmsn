@@ -141,6 +141,7 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/*!
 `rust_tmsn` is a collection of general modules to help implementing TMSN
@@ -165,7 +166,8 @@ rust_tmsn = { path = &quot;../rust-tmsn&quot; }
 
 <span class="doccomment">/// Establish network connections between the workers in the cluster</span>
 <span class="kw">mod</span> <span class="ident">network</span>;
-<span class="kw">mod</span> <span class="ident">packet</span>;
+<span class="doccomment">/// The packet sent out via network</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>::<span class="ident">Receiver</span>;

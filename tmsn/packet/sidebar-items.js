@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["PacketType","Types of packets"]],"struct":[["Packet","Packet "]]});
