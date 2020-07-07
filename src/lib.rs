@@ -14,12 +14,14 @@ rust_tmsn = { path = "../rust-tmsn" }
 ```
 */
 #[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
 extern crate bufstream;
 extern crate serde;
 extern crate serde_json;
 
 /// Establish network connections between the workers in the cluster
 mod network;
+mod packet;
 
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
@@ -27,6 +29,8 @@ use std::sync::mpsc::Sender;
 
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
+
+use packet::Packet;
 
 
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
@@ -55,11 +59,11 @@ use serde::de::DeserializeOwned;
 pub struct Network<T> {
     name: String,
     port: u16,
-    always_confirm: bool,
-    inbound_put: Sender<T>,
-    inbound_pop: Receiver<T>,
-    outbound_put: Sender<T>,
-    outbound_pop: Option<Receiver<T>>,
+    inbound_put: Sender<Packet<T>>,
+    inbound_pop: Receiver<Packet<T>>,
+    outbound_put: Sender<Packet<T>>,
+    outbound_pop: Option<Receiver<Packet<T>>>,
+    callback: fn(T) -> (),
 }
 
 
@@ -69,18 +73,18 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     ///   * `name` - the local computer name.
     ///   * `port` - the port number that the machines in the network are listening to.
     ///   `port` has to be the same value for all machines.
-    ///   * `always_confirm` - set to `true` to collect the success/drop rate of the communication
-    pub fn new(name: &str, port: u16, always_confirm: bool) -> Network<T> {
-        let (inbound_put, inbound_pop): (Sender<T>, Receiver<T>) = mpsc::channel();
-        let (outbound_put, outbound_pop): (Sender<T>, Receiver<T>) = mpsc::channel();
+    pub fn new(name: &str, port: u16, callback: fn(T) -> ()) -> Network<T> {
+        let (inbound_put, inbound_pop): (Sender<Packet<T>>, Receiver<Packet<T>>) = mpsc::channel();
+        let (outbound_put, outbound_pop): (Sender<Packet<T>>, Receiver<Packet<T>>) =
+            mpsc::channel();
         Network {
             name: name.to_string(),
             port: port,
-            always_confirm: always_confirm,
             inbound_put: inbound_put,
             inbound_pop: inbound_pop,
             outbound_put: outbound_put,
             outbound_pop: Some(outbound_pop),
+            callback: callback,
         }
     }
 
@@ -89,25 +93,15 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     ///   * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
     pub fn start_network(&mut self, init_remote_ips: &Vec<String>) -> Result<(), &'static str> {
         network::start_network(
-            self.name.as_str(), init_remote_ips, self.port, self.always_confirm,
+            self.name.as_str(), init_remote_ips, self.port, true,
             self.inbound_put.clone(), self.outbound_pop.take().unwrap())
     }
 
     /// Send out a packet
     pub fn send(&self, packet: T) -> Result<(), ()> {
-        let ret = self.outbound_put.send(packet);
+        let ret = self.outbound_put.send(Packet::new(packet));
         if ret.is_ok() {
             Ok(())
-        } else {
-            Err(())
-        }
-    }
-
-    /// Receive a packet
-    pub fn receive(&self) -> Result<T, ()> {
-        let ret = self.inbound_pop.recv();
-        if ret.is_ok() {
-            Ok(ret.unwrap())
         } else {
             Err(())
         }
