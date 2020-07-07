@@ -21,7 +21,8 @@ extern crate serde_json;
 
 /// Establish network connections between the workers in the cluster
 mod network;
-mod packet;
+/// The packet sent out via network
+pub mod packet;
 
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;

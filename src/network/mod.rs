@@ -104,7 +104,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         return is_sender_on;
     }
     // receiver initiates remote connections
-    // TTT receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
+    // receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
     send_initial_ips(init_remote_ips, ip_send, port);
     Ok(())
 }
