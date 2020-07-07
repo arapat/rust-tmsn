@@ -87,8 +87,8 @@ use std::sync::mpsc;
 ///
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: &str, init_remote_ips: &Vec<String>, port: u16,
-        is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>,
+        name: &str, init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
+        data_local: Receiver<T>, callback: fn(T) -> (),
 ) -> Result<(), &'static str> {
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
@@ -104,7 +104,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         return is_sender_on;
     }
     // receiver initiates remote connections
-    receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
+    // TTT receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
     send_initial_ips(init_remote_ips, ip_send, port);
     Ok(())
 }
