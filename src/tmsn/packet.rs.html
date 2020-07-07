@@ -98,13 +98,13 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Packet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Actual workload of the packet</span>
-    <span class="ident">content</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">content</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Packet sent out time</span>
-    <span class="ident">sent_time</span>: <span class="ident">SystemTime</span>,
+    <span class="kw">pub</span> <span class="ident">sent_time</span>: <span class="ident">SystemTime</span>,
     <span class="doccomment">/// Packet receive time</span>
-    <span class="ident">receive_time</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">receive_time</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Type of the packet</span>
-    <span class="ident">packet_type</span>: <span class="ident">PacketType</span>,
+    <span class="kw">pub</span> <span class="ident">packet_type</span>: <span class="ident">PacketType</span>,
 }
 
 
