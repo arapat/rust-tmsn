@@ -10,7 +10,7 @@ with the path should be the actual location of `rust_tmsn`.
 
 ```ignore
 [dependencies]
-rust_tmsn = { path = "../rust-tmsn" }
+tmsn = { path = "../tmsn" }
 ```
 */
 #[macro_use] extern crate log;
@@ -36,6 +36,31 @@ use serde::de::DeserializeOwned;
 ///
 /// Example:
 /// ```
+/// use tmsn::Network;
+/// use std::thread::sleep;
+/// use std::time::Duration;
+/// use std::sync::Arc;
+/// use std::sync::RwLock;
+///
+/// static MESSAGE: &str = "Hello, this is a test message.";
+///
+/// let neighbors = vec![String::from("127.0.0.1")];
+/// let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
+/// let t = output.clone();
+/// let network = Network::new("local", 8080, &neighbors, Box::new(move |msg: String| {
+///     let mut t = t.write().unwrap();
+///     *t = Some(msg.clone());
+/// }));
+/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+///
+/// // To send out a text message
+/// let message = String::from(MESSAGE);
+/// network.send(message.clone()).unwrap();
+///
+/// // The message above is supposed to send out to all the neighbors computers specified
+/// // in the `network` vector, which contains only the localhost.
+/// sleep(Duration::from_millis(100));
+/// assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 /// ```
 pub struct Network<T: 'static> {
     outbound_put: Sender<T>,
