@@ -7,18 +7,20 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
-use serde::ser::Serialize;
-
 use std::thread::spawn;
+use serde::ser::Serialize;
+use serde::de::DeserializeOwned;
+
+use packet::Packet;
 
 
 type StreamLockVec = Arc<RwLock<Vec<BufStream<TcpStream>>>>;
 
 
 // Start all sender routines - start local sender and also accept remote senders
-pub fn start_sender<T: 'static + Send + Serialize>(
-        name: String, port: u16, model_recv: Receiver<T>,
-        remote_ip_send: Option<Sender<SocketAddr>>) -> Result<(), &'static str> {
+pub fn start_sender<T: 'static + Send + Serialize + DeserializeOwned>(
+    name: String, port: u16, model_recv: Receiver<T>, remote_ip_send: Option<Sender<SocketAddr>>,
+) -> Result<(), &'static str> where T: Send + Serialize {
     let streams: Vec<BufStream<TcpStream>> = vec![];
     let streams_arc = Arc::new(RwLock::new(streams));
 
@@ -88,7 +90,8 @@ fn sender_listener(
 
 
 // Core sender routine - 1 to many
-fn sender<T: Serialize>(name: String, streams: StreamLockVec, chan: Receiver<T>) {
+fn sender<'a, T>(name: String, streams: StreamLockVec, chan: Receiver<T>)
+where T: 'static + Send + Serialize + DeserializeOwned {
     info!("1-to-many Sender has started.");
 
     let mut idx = 0;
@@ -100,7 +103,8 @@ fn sender<T: Serialize>(name: String, streams: StreamLockVec, chan: Receiver<T>)
         }
         debug!("network-to-send-out, {}, {}", name, idx);
 
-        let packet_load: (String, u32, T) = (name.clone(), idx, data.unwrap());
+        let data = Packet::new(data.unwrap());
+        let packet_load: (String, u32, Packet<T>) = (name.clone(), idx, data);
         let safe_json = serde_json::to_string(&packet_load);
         if let Err(err) = safe_json {
             error!("Local model cannot be serialized. Error: {}", err);

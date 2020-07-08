@@ -31,8 +31,6 @@ use std::sync::mpsc::Sender;
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
-use packet::Packet;
-
 
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
 ///
@@ -55,12 +53,8 @@ use packet::Packet;
 /// fn callback(msg: String) {
 /// }
 /// ```
-pub struct Network<T> {
-    name: String,
-    port: u16,
-    outbound_put: Sender<Packet<T>>,
-    outbound_pop: Option<Receiver<Packet<T>>>,
-    callback: fn(Packet<T>) -> (),
+pub struct Network<T: 'static> {
+    outbound_put: Sender<T>,
 }
 
 
@@ -70,31 +64,24 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     ///   * `name` - the local computer name.
     ///   * `port` - the port number that the machines in the network are listening to.
     ///   `port` has to be the same value for all machines.
+    ///   * `remote_ips` - a list of IPs to which this computer makes a connection initially.
     ///   * `callback` - a callback function to be called when a new packet is received
-    pub fn new(name: &str, port: u16, callback: fn(Packet<T>) -> ()) -> Network<T> {
-        let (outbound_put, outbound_pop): (Sender<Packet<T>>, Receiver<Packet<T>>) =
-            mpsc::channel();
+    pub fn new(
+        name: &str,
+        port: u16,
+        remote_ips: &Vec<String>,
+        callback: Box<dyn FnMut(T) + Sync + Send>,
+    ) -> Network<T> {
+        let (outbound_put, outbound_pop): (Sender<T>, Receiver<T>) = mpsc::channel();
+        network::start_network(name, remote_ips, port, true, outbound_pop, callback).unwrap();
         Network {
-            name: name.to_string(),
-            port: port,
             outbound_put: outbound_put,
-            outbound_pop: Some(outbound_pop),
-            callback: callback,
         }
-    }
-
-    /// Start the network
-    /// Parameter:
-    ///   * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
-    pub fn start_network(&mut self, init_remote_ips: &Vec<String>) -> Result<(), &'static str> {
-        network::start_network(
-            self.name.as_str(), init_remote_ips, self.port, true, self.outbound_pop.take().unwrap(),
-            self.callback)
     }
 
     /// Send out a packet
     pub fn send(&self, packet: T) -> Result<(), ()> {
-        let ret = self.outbound_put.send(Packet::new(packet));
+        let ret = self.outbound_put.send(packet);
         if ret.is_ok() {
             Ok(())
         } else {
@@ -123,9 +110,11 @@ mod tests {
 
     #[test]
     fn test() {
-        let mut network = Network::new("local", 8080, callback);
+        let mut remote_msg = "".to_string();
         let neighbors = vec![String::from("127.0.0.1")];
-        network.start_network(&neighbors).unwrap();
+        let network = Network::new("local", 8080, &neighbors, &mut |msg: String| {
+            // remote_msg = msg.clone();
+        });
         sleep(Duration::from_millis(100));  // add waiting in case network is not ready
 
         // To send out a text message
@@ -135,7 +124,8 @@ mod tests {
         // The message above is supposed to send out to all the neighbors computers specified
         // in the `network` vector, which contains only the localhost.
         sleep(Duration::from_millis(100));
-        assert_eq!(unsafe { &CALLBACK_MSG }, &Some(String::from(MESSAGE)));
+        // assert_eq!(unsafe { &CALLBACK_MSG }, &Some(String::from(MESSAGE)));
+        assert_eq!(remote_msg, String::from(MESSAGE));
     }
 
     fn callback(msg: String) {
