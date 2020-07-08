@@ -11,6 +11,7 @@ use std::thread::spawn;
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
+use packet::JsonFormat;
 use packet::Packet;
 
 
@@ -104,7 +105,7 @@ where T: 'static + Send + Serialize + DeserializeOwned {
         debug!("network-to-send-out, {}, {}", name, idx);
 
         let data = Packet::new(data.unwrap());
-        let packet_load: (String, u32, Packet<T>) = (name.clone(), idx, data);
+        let packet_load: JsonFormat<T> = (name.clone(), idx, data);
         let safe_json = serde_json::to_string(&packet_load);
         if let Err(err) = safe_json {
             error!("Local model cannot be serialized. Error: {}", err);

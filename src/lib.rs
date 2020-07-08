@@ -36,22 +36,6 @@ use serde::de::DeserializeOwned;
 ///
 /// Example:
 /// ```
-/// use tmsn::Network;
-/// use std::thread::sleep;
-/// use std::time::Duration;
-///
-/// let mut network = Network::new("local", 8080, callback);
-/// let neighbors = vec![String::from("127.0.0.1")];
-/// // start the network
-/// network.start_network(&neighbors).unwrap();
-/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
-///
-/// // To send out a text message
-/// let message = String::from("Hello, this is a test message.");
-/// network.send(message.clone()).unwrap();
-///
-/// fn callback(msg: String) {
-/// }
 /// ```
 pub struct Network<T: 'static> {
     outbound_put: Sender<T>,
@@ -110,11 +94,10 @@ mod tests {
 
     #[test]
     fn test() {
-        let mut remote_msg = "".to_string();
         let neighbors = vec![String::from("127.0.0.1")];
-        let network = Network::new("local", 8080, &neighbors, &mut |msg: String| {
-            // remote_msg = msg.clone();
-        });
+        let network = Network::new("local", 8080, &neighbors, Box::new(|msg: String| {
+            unsafe { CALLBACK_MSG = Some(msg.clone()); }
+        }));
         sleep(Duration::from_millis(100));  // add waiting in case network is not ready
 
         // To send out a text message
@@ -124,11 +107,7 @@ mod tests {
         // The message above is supposed to send out to all the neighbors computers specified
         // in the `network` vector, which contains only the localhost.
         sleep(Duration::from_millis(100));
-        // assert_eq!(unsafe { &CALLBACK_MSG }, &Some(String::from(MESSAGE)));
-        assert_eq!(remote_msg, String::from(MESSAGE));
-    }
-
-    fn callback(msg: String) {
-        unsafe { CALLBACK_MSG = Some(msg) };
+        assert_eq!(unsafe { &CALLBACK_MSG }, &Some(String::from(MESSAGE)));
+        // assert_eq!(CALLBACK_MSG, Some(String::from(MESSAGE)));
     }
 }

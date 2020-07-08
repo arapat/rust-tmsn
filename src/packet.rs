@@ -4,6 +4,8 @@ use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
 
+pub type JsonFormat<T> = (String, u32, Packet<T>);
+
 /// Types of packets
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum PacketType {

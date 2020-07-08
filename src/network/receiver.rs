@@ -12,6 +12,8 @@ use serde::de::DeserializeOwned;
 use std::thread::sleep;
 use std::thread::spawn;
 
+use packet::JsonFormat;
+
 
 // Start all receiver routines
 pub fn start_receiver<T: 'static + Send + DeserializeOwned>(
@@ -83,11 +85,11 @@ fn receiver<T: DeserializeOwned>(
                 error!("Cannot parse the JSON description of the remote model from {}. \
                         Message ID {}, JSON string is `{}`. Error: {}", remote_ip, idx, json, err);
             } else {
-                let (remote_name, remote_idx, data): (String, u32, T) = remote_packet.unwrap();
+                let (remote_name, remote_idx, data): JsonFormat<T> = remote_packet.unwrap();
                 debug!("message-received, {}, {}, {}, {}, {}, {}",
                        name, idx, remote_name, remote_idx, remote_ip, json.len());
                 let f = &mut *(callback.write().unwrap());
-                f(data);
+                f(data.content.unwrap());
             }
             idx += 1;
         } else {
