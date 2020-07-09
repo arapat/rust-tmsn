@@ -1,12 +1,12 @@
 /*!
-`rust_tmsn` is a collection of general modules to help implementing TMSN
+`tmsn` is a collection of general modules to help implementing TMSN
 for various learning algorithms.
 
-## Use rust_tmsn with Cargo
+## Use `tmsn` with Cargo
 
-Please download the source code of `rust_tmsn` to your computer, and
+Please download the source code of `tmsn` to your computer, and
 append following lines to the `Cargo.toml` file in your project
-with the path should be the actual location of `rust_tmsn`.
+with the path should be the actual location of `tmsn`.
 
 ```ignore
 [dependencies]
