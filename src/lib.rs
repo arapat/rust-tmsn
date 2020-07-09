@@ -73,11 +73,13 @@ use perfstats::PerfStats;
 pub struct Network<T: 'static> {
     outbound_put: Sender<(Option<String>, Packet<T>)>,
     perf_stats: Arc<RwLock<PerfStats>>,
+    heartbeat_interv_secs: Arc<RwLock<u64>>,
 }
 
 
 impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     /// Create a new Network object
+    ///
     /// Parameters:
     ///   * `name` - the local computer name.
     ///   * `port` - the port number that the machines in the network are listening to.
@@ -109,18 +111,24 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
             })).unwrap();
 
         // send heart beat signals
+        let heartbeat_interv_secs = Arc::new(RwLock::new(30));
         let head_ip = remote_ips[0].clone();
         let outbound = outbound_put.clone();
+        let interval = heartbeat_interv_secs.clone();
         std::thread::spawn(move|| {
             loop {
                 outbound.send((Some(head_ip.clone()), Packet::<T>::get_hb())).unwrap();
-                sleep(Duration::from_secs(30));
+                {
+                    let secs = interval.read().unwrap();
+                    sleep(Duration::from_secs(*secs));
+                }
             }
         });
 
         Network {
             outbound_put: outbound_put.clone(),
             perf_stats: perf_stats,
+            heartbeat_interv_secs: heartbeat_interv_secs,
         }
     }
 
@@ -135,7 +143,13 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     }
 
     /// Set heartbeat interval
-    pub fn set_health_parameter(&mut self) {
+    ///
+    /// Parameter:
+    ///   * hb_interval_secs: the time interval between sending out the heartbeat signals
+    ///     (unit: seconds)
+    pub fn set_health_parameter(&mut self, hb_interval_secs: u64) {
+        let mut val = self.heartbeat_interv_secs.write().unwrap();
+        *val = hb_interval_secs;
     }
 
     /// Return a summary of the network communication
@@ -161,10 +175,11 @@ mod tests {
         let neighbors = vec![String::from("127.0.0.1")];
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let network = Network::new("local", 8080, &neighbors, Box::new(move |msg: String| {
+        let mut network = Network::new("local", 8080, &neighbors, Box::new(move |msg: String| {
             let mut t = t.write().unwrap();
             *t = Some(msg.clone());
         }));
+        network.set_health_parameter(1);
         sleep(Duration::from_millis(100));  // add waiting in case network is not ready
 
         // To send out a text message
@@ -175,5 +190,10 @@ mod tests {
         // in the `network` vector, which contains only the localhost.
         sleep(Duration::from_millis(100));
         assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
+
+        sleep(Duration::from_secs(1));
+        let health = network.get_health();
+        assert_eq!(health.total, 2 + 2);
+        assert_eq!(health.num_hb, 1);
     }
 }

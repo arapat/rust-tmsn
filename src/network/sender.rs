@@ -74,7 +74,12 @@ fn income_conn_listener(
                 let mut lock_w = sender_streams.write().expect(
                     "Failed to obtain the lock for expanding sender_streams."
                 );
-                lock_w.push((remote_addr.to_string(), BufStream::new(stream)));
+                let remote_addr_str = {
+                    let s = remote_addr.to_string();
+                    let r: Vec<&str> = s.splitn(2, ':').collect();
+                    r[0].to_string()
+                };
+                lock_w.push((remote_addr_str, BufStream::new(stream)));
                 drop(lock_w);
                 info!("Remote server {} will receive our model from now on.", remote_addr);
                 // subscribe to the remote machine
@@ -105,6 +110,13 @@ where T: 'static + Send + Serialize + DeserializeOwned {
         debug!("network-to-send-out, {}, {}", name, idx);
 
         let (remote_ip, data) = data.unwrap();
+        let remote_ip = if remote_ip.is_some() {
+            let remote_ip = remote_ip.unwrap();
+            let r: Vec<&str> = remote_ip.splitn(2, ':').collect();
+            Some(r[0].to_string())
+        } else {
+            None
+        };
         let packet_load: JsonFormat<T> = (name.clone(), idx, data);
         let safe_json = serde_json::to_string(&packet_load);
         if let Err(err) = safe_json {
