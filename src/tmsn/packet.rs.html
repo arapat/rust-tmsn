@@ -79,6 +79,13 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">SystemTime</span>;
 
@@ -159,6 +166,13 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_workload</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">packet_type</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PacketType</span>::<span class="ident">Message</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">f32</span> {
+        <span class="self">self</span>.<span class="ident">receive_time</span>.<span class="ident">unwrap</span>()
+            .<span class="ident">duration_since</span>(<span class="self">self</span>.<span class="ident">sent_time</span>)
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">as_secs_f32</span>()
     }
 }
 </pre></div>

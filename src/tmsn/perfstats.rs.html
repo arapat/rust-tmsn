@@ -26,33 +26,97 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
 </pre><div class="example-wrap"><pre class="rust ">
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">de</span>::<span class="ident">DeserializeOwned</span>;
+
 <span class="kw">use</span> <span class="ident">packet</span>::<span class="ident">Packet</span>;
 <span class="kw">use</span> <span class="ident">packet</span>::<span class="ident">PacketType</span>;
 
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PerfStats</span> {
-    <span class="doccomment">/// total number of packets received</span>
+    <span class="doccomment">/// total number of packets received (messages + heartbeats + echos)</span>
     <span class="kw">pub</span> <span class="ident">total</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// total number of messages received</span>
+    <span class="kw">pub</span> <span class="ident">num_msg</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// total number of heatbeats received</span>
     <span class="kw">pub</span> <span class="ident">num_hb</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// total roundtrip time for sending a packet</span>
+    <span class="kw">pub</span> <span class="ident">msg_duration</span>: <span class="ident">f32</span>,
+    <span class="doccomment">/// total roundtrip time for sending a heartbeat</span>
+    <span class="kw">pub</span> <span class="ident">hb_duration</span>: <span class="ident">f32</span>,
 }
 
 
-<span class="kw">impl</span> <span class="ident">PerfStats</span> { <span class="comment">// where T: &#39;static + Send + Serialize + DeserializeOwned {</span>
+<span class="kw">impl</span> <span class="ident">PerfStats</span> {
+    <span class="doccomment">/// create a new performance monitor</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PerfStats</span> {
         <span class="ident">PerfStats</span> {
             <span class="ident">total</span>: <span class="number">0</span>,
+            <span class="ident">num_msg</span>: <span class="number">0</span>,
             <span class="ident">num_hb</span>: <span class="number">0</span>,
+            <span class="ident">msg_duration</span>: <span class="number">0.0</span>,
+            <span class="ident">hb_duration</span>: <span class="number">0.0</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
+    <span class="doccomment">/// update the health stats</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="ident">Packet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="kw">where</span> <span class="ident">T</span>: <span class="lifetime">&#39;static</span> <span class="op">+</span> <span class="ident">DeserializeOwned</span> {
         <span class="self">self</span>.<span class="ident">total</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-        <span class="kw">if</span> <span class="ident">packet</span>.<span class="ident">packet_type</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PacketType</span>::<span class="ident">Heartbeat</span> {
-            <span class="self">self</span>.<span class="ident">num_hb</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="kw">match</span> <span class="ident">packet</span>.<span class="ident">packet_type</span> {
+            <span class="ident">PacketType</span>::<span class="ident">Message</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">num_msg</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+            },
+            <span class="ident">PacketType</span>::<span class="ident">Echo</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">msg_duration</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_duration</span>();
+            },
+            <span class="ident">PacketType</span>::<span class="ident">Heartbeat</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">num_hb</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+            },
+            <span class="ident">PacketType</span>::<span class="ident">HeartbeatEcho</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">hb_duration</span> <span class="op">=</span> <span class="ident">packet</span>.<span class="ident">get_duration</span>();
+            },
         }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_avg_roundtrip_time_msg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">f32</span> {
+        <span class="self">self</span>.<span class="ident">msg_duration</span> <span class="op">/</span> <span class="self">self</span>.<span class="ident">num_msg</span> <span class="kw">as</span> <span class="ident">f32</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_avg_roundtrip_time_hb</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">f32</span> {
+        <span class="self">self</span>.<span class="ident">hb_duration</span> <span class="op">/</span> <span class="self">self</span>.<span class="ident">num_hb</span> <span class="kw">as</span> <span class="ident">f32</span>
     }
 }
 </pre></div>

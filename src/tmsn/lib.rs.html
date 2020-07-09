@@ -198,16 +198,18 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/*!
-`rust_tmsn` is a collection of general modules to help implementing TMSN
+`tmsn` is a collection of general modules to help implementing TMSN
 for various learning algorithms.
 
-## Use rust_tmsn with Cargo
+## Use `tmsn` with Cargo
 
-Please download the source code of `rust_tmsn` to your computer, and
+Please download the source code of `tmsn` to your computer, and
 append following lines to the `Cargo.toml` file in your project
-with the path should be the actual location of `rust_tmsn`.
+with the path should be the actual location of `tmsn`.
 
 ```ignore
 [dependencies]
@@ -397,6 +399,8 @@ tmsn = { path = &quot;../tmsn&quot; }
         <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">get_health</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">health</span>.<span class="ident">total</span>, <span class="number">2</span> <span class="op">+</span> <span class="number">2</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">health</span>.<span class="ident">num_hb</span>, <span class="number">1</span>);
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;roundtrip time, {}, {}&quot;</span>,
+            <span class="ident">health</span>.<span class="ident">get_avg_roundtrip_time_msg</span>(), <span class="ident">health</span>.<span class="ident">get_avg_roundtrip_time_msg</span>());
     }
 }
 </pre></div>
