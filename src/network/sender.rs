@@ -40,7 +40,7 @@ pub fn start_sender<T: 'static + Send + Serialize + DeserializeOwned>(
     };
     let (name_lstn, streams_lstn) = (name.clone(), streams.clone());
     spawn(move|| {
-        sender_listener(name_lstn, streams_lstn, remote_ip_send, listener);
+        income_conn_listener(name_lstn, streams_lstn, remote_ip_send, listener);
     });
 
     // Repeatedly sending local data out to the remote connections
@@ -54,7 +54,7 @@ pub fn start_sender<T: 'static + Send + Serialize + DeserializeOwned>(
 // Sender listener (i.e. the listener of the sender) is responsible for:
 //     1. Add new incoming stream to sender (via streams RwLock)
 //     2. Send new incoming address to receiver so that it connects to the new machine
-fn sender_listener(
+fn income_conn_listener(
         name: String,
         sender_streams: LockedStream,
         receiver_ips: Option<Sender<SocketAddr>>,
