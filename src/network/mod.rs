@@ -2,13 +2,14 @@ mod sender;
 mod receiver;
 
 use std::net::SocketAddr;
+use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
-use std::sync::mpsc;
+use packet::Packet;
 
 
 ///
@@ -87,8 +88,12 @@ use std::sync::mpsc;
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
-        outbound_recv: Receiver<T>, callback: Box<dyn FnMut(T) + Sync + Send>,
+        outbound_send: Sender<(Option<String>, Packet<T>)>,
+        outbound_recv: Receiver<(Option<String>, Packet<T>)>,
+        callback: Box<dyn FnMut(T) + Sync + Send>,
 ) -> Result<(), &'static str> {
+    // receiver initiates the connection
+
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
@@ -104,7 +109,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         return is_sender_on;
     }
     // receiver initiates remote connections
-    receiver::start_receiver(name.to_string(), port, callback, ip_recv);
+    receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
     send_initial_ips(init_remote_ips, ip_send, port);
     Ok(())
 }
@@ -112,7 +117,8 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
 
 #[allow(dead_code)]
 fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: &str, port: u16, data_local: Receiver<T>) -> Result<(), &'static str> {
+        name: &str, port: u16, data_local: Receiver<(Option<String>, Packet<T>)>,
+) -> Result<(), &'static str> {
     info!("Starting the network (send only) module.");
     sender::start_sender(name.to_string(), port, data_local, None)
 }
@@ -121,11 +127,12 @@ fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
 #[allow(dead_code)]
 fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>(
     name: &str, remote_ips: &Vec<String>, port: u16,
+    outbound_send: Sender<(Option<String>, Packet<T>)>,
     callback: Box<dyn FnMut(T) + Sync + Send>,
 ) -> Result<(), &'static str> {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
-    receiver::start_receiver(name.to_string(), port, callback, ip_recv);
+    receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
     send_initial_ips(remote_ips, ip_send, port);
     Ok(())
 }

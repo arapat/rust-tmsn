@@ -31,6 +31,8 @@ use std::sync::mpsc::Sender;
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
+use packet::Packet;
+
 
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
 ///
@@ -63,7 +65,7 @@ use serde::de::DeserializeOwned;
 /// assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 /// ```
 pub struct Network<T: 'static> {
-    outbound_put: Sender<T>,
+    outbound_put: Sender<(Option<String>, Packet<T>)>,
 }
 
 
@@ -81,8 +83,11 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
         remote_ips: &Vec<String>,
         callback: Box<dyn FnMut(T) + Sync + Send>,
     ) -> Network<T> {
-        let (outbound_put, outbound_pop): (Sender<T>, Receiver<T>) = mpsc::channel();
-        network::start_network(name, remote_ips, port, true, outbound_pop, callback).unwrap();
+        let (outbound_put, outbound_pop):
+            (Sender<(Option<String>, Packet<T>)>, Receiver<(Option<String>, Packet<T>)>)
+            = mpsc::channel();
+        network::start_network(
+            name, remote_ips, port, true, outbound_put.clone(), outbound_pop, callback).unwrap();
         Network {
             outbound_put: outbound_put,
         }
@@ -90,7 +95,7 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
 
     /// Send out a packet
     pub fn send(&self, packet: T) -> Result<(), ()> {
-        let ret = self.outbound_put.send(packet);
+        let ret = self.outbound_put.send((None, Packet::new(packet)));
         if ret.is_ok() {
             Ok(())
         } else {

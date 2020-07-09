@@ -1,9 +1,9 @@
 use std::time::SystemTime;
 
-use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
 
+// local machine name, Packet index, packet
 pub type JsonFormat<T> = (String, u32, Packet<T>);
 
 /// Types of packets
@@ -34,7 +34,7 @@ pub struct Packet<T> {
 }
 
 
-impl<T> Packet<T> where T: 'static + Send + Serialize + DeserializeOwned {
+impl<T> Packet<T> where T: 'static + DeserializeOwned {
     pub fn new(msg: T) -> Packet<T> {
         Packet {
             content: Some(msg),
@@ -57,21 +57,21 @@ impl<T> Packet<T> where T: 'static + Send + Serialize + DeserializeOwned {
         self.receive_time = Some(SystemTime::now());
     }
 
-    pub fn get_receipt(&self) -> Packet<T> {
-        assert!(self.receive_time.is_some());
-        assert!(self.packet_type == PacketType::Message ||
-                self.packet_type == PacketType::Heartbeat);
+    pub fn get_receipt(&self) -> Option<Packet<T>> {
+        if self.packet_type != PacketType::Message && self.packet_type != PacketType::Heartbeat {
+            return None;
+        }
         let echo_type =
             if self.packet_type == PacketType::Message {
                 PacketType::Echo
             } else {
                 PacketType::HeartbeatEcho
             };
-        Packet {
+        Some(Packet {
             content: None,
             sent_time: self.sent_time.clone(),
             receive_time: self.receive_time.clone(),
             packet_type: echo_type,
-        }
+        })
     }
 }
