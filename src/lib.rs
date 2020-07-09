@@ -30,6 +30,8 @@ use std::sync::RwLock;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
+use std::thread::sleep;
+use std::time::Duration;
 
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
@@ -88,6 +90,9 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
         remote_ips: &Vec<String>,
         mut callback: Box<dyn FnMut(T) + Sync + Send>,
     ) -> Network<T> {
+        assert!(remote_ips.len() > 0);
+
+        // start the network
         let (outbound_put, outbound_pop):
             (Sender<(Option<String>, Packet<T>)>, Receiver<(Option<String>, Packet<T>)>)
             = mpsc::channel();
@@ -102,6 +107,17 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
                     callback(packet.content.unwrap());
                 }
             })).unwrap();
+
+        // send heart beat signals
+        let head_ip = remote_ips[0].clone();
+        let outbound = outbound_put.clone();
+        std::thread::spawn(move|| {
+            loop {
+                outbound.send((Some(head_ip.clone()), Packet::<T>::get_hb())).unwrap();
+                sleep(Duration::from_secs(30));
+            }
+        });
+
         Network {
             outbound_put: outbound_put.clone(),
             perf_stats: perf_stats,
