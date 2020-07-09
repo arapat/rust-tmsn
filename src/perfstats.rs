@@ -4,7 +4,9 @@ use packet::PacketType;
 
 #[derive(Clone)]
 pub struct PerfStats {
+    /// total number of packets received
     pub total: usize,
+    /// total number of heatbeats received
     pub num_hb: usize,
 }
 

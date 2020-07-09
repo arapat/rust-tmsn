@@ -21,7 +21,8 @@ extern crate serde_json;
 
 /// Establish network connections between the workers in the cluster
 mod network;
-mod perfstats;
+/// Struct for reporting the health of the network
+pub mod perfstats;
 /// The packet sent out via network
 pub mod packet;
 
