@@ -196,5 +196,7 @@ mod tests {
         let health = network.get_health();
         assert_eq!(health.total, 2 + 2);
         assert_eq!(health.num_hb, 1);
+        println!("roundtrip time, {}, {}",
+            health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
     }
 }

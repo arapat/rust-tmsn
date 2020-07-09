@@ -78,4 +78,11 @@ impl<T> Packet<T> where T: 'static + DeserializeOwned {
     pub fn is_workload(&self) -> bool {
         self.packet_type == PacketType::Message
     }
+
+    pub fn get_duration(&self) -> f32 {
+        self.receive_time.unwrap()
+            .duration_since(self.sent_time)
+            .unwrap()
+            .as_secs_f32()
+    }
 }
