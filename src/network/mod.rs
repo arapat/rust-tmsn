@@ -90,7 +90,7 @@ pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
         name: &str, init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
         outbound_send: Sender<(Option<String>, Packet<T>)>,
         outbound_recv: Receiver<(Option<String>, Packet<T>)>,
-        callback: Box<dyn FnMut(T) + Sync + Send>,
+        callback: Box<dyn FnMut(Packet<T>) + Sync + Send>,
 ) -> Result<(), &'static str> {
     // receiver initiates the connection
 
@@ -128,7 +128,7 @@ fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
 fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>(
     name: &str, remote_ips: &Vec<String>, port: u16,
     outbound_send: Sender<(Option<String>, Packet<T>)>,
-    callback: Box<dyn FnMut(T) + Sync + Send>,
+    callback: Box<dyn FnMut(Packet<T>) + Sync + Send>,
 ) -> Result<(), &'static str> {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();

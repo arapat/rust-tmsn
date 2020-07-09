@@ -21,9 +21,12 @@ extern crate serde_json;
 
 /// Establish network connections between the workers in the cluster
 mod network;
+mod perfstats;
 /// The packet sent out via network
 pub mod packet;
 
+use std::sync::Arc;
+use std::sync::RwLock;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -32,6 +35,7 @@ use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
 use packet::Packet;
+use perfstats::PerfStats;
 
 
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
@@ -66,6 +70,7 @@ use packet::Packet;
 /// ```
 pub struct Network<T: 'static> {
     outbound_put: Sender<(Option<String>, Packet<T>)>,
+    perf_stats: Arc<RwLock<PerfStats>>,
 }
 
 
@@ -81,15 +86,25 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
         name: &str,
         port: u16,
         remote_ips: &Vec<String>,
-        callback: Box<dyn FnMut(T) + Sync + Send>,
+        mut callback: Box<dyn FnMut(T) + Sync + Send>,
     ) -> Network<T> {
         let (outbound_put, outbound_pop):
             (Sender<(Option<String>, Packet<T>)>, Receiver<(Option<String>, Packet<T>)>)
             = mpsc::channel();
+        let perf_stats = Arc::new(RwLock::new(PerfStats::new()));
+        let ps = perf_stats.clone();
         network::start_network(
-            name, remote_ips, port, true, outbound_put.clone(), outbound_pop, callback).unwrap();
+            name, remote_ips, port, true, outbound_put.clone(), outbound_pop,
+            Box::new(move |packet| {
+                let mut ps = ps.write().unwrap();
+                ps.update(&packet);
+                if packet.is_workload() {
+                    callback(packet.content.unwrap());
+                }
+            })).unwrap();
         Network {
-            outbound_put: outbound_put,
+            outbound_put: outbound_put.clone(),
+            perf_stats: perf_stats,
         }
     }
 
@@ -104,11 +119,13 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     }
 
     /// Set heartbeat interval
-    pub fn set_health_parameter() {
+    pub fn set_health_parameter(&mut self) {
     }
 
     /// Return a summary of the network communication
-    pub fn get_health() {
+    pub fn get_health(&self) -> PerfStats {
+        let ps = self.perf_stats.read().unwrap();
+        (*ps).clone()
     }
 }
 

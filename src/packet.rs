@@ -58,11 +58,11 @@ impl<T> Packet<T> where T: 'static + DeserializeOwned {
     }
 
     pub fn get_receipt(&self) -> Option<Packet<T>> {
-        if self.packet_type != PacketType::Message && self.packet_type != PacketType::Heartbeat {
+        if !self.is_workload() && self.packet_type != PacketType::Heartbeat {
             return None;
         }
         let echo_type =
-            if self.packet_type == PacketType::Message {
+            if self.is_workload() {
                 PacketType::Echo
             } else {
                 PacketType::HeartbeatEcho
@@ -73,5 +73,9 @@ impl<T> Packet<T> where T: 'static + DeserializeOwned {
             receive_time: self.receive_time.clone(),
             packet_type: echo_type,
         })
+    }
+
+    pub fn is_workload(&self) -> bool {
+        self.packet_type == PacketType::Message
     }
 }

@@ -21,7 +21,7 @@ use packet::Packet;
 pub fn start_receiver<T: 'static + Send + DeserializeOwned>(
         name: String, port: u16,
         outbound_send: Sender<(Option<String>, Packet<T>)>,
-        callback: Box<dyn FnMut(T) + Sync + Send>,
+        callback: Box<dyn FnMut(Packet<T>) + Sync + Send>,
         remote_ip_recv: Receiver<SocketAddr>) {
     spawn(move|| {
         // If a new neighbor occurs, launch receiver to receive data from it
@@ -64,7 +64,7 @@ pub fn start_receiver<T: 'static + Send + DeserializeOwned>(
 pub fn receiver<T: 'static + DeserializeOwned>(
         name: String, remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
         outbound_send: Sender<(Option<String>, Packet<T>)>,
-        callback: Arc<RwLock<Box<dyn FnMut(T) + Sync + Send>>>, 
+        callback: Arc<RwLock<Box<dyn FnMut(Packet<T>) + Sync + Send>>>,
 ) {
     info!("Receiver started from {} to {}", name, remote_ip);
     let mut idx = 0;
@@ -88,7 +88,7 @@ pub fn receiver<T: 'static + DeserializeOwned>(
                 packet.mark_received();
                 let f = &mut *(callback.write().unwrap());
                 let receipt = packet.get_receipt();
-                f(packet.content.unwrap());
+                f(packet);
                 if receipt.is_some() {
                     outbound_send.send((Some(remote_ip.to_string()), receipt.unwrap())).unwrap();
                 }
