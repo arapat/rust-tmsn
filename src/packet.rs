@@ -1,10 +1,8 @@
 use std::time::SystemTime;
 
-use serde::de::DeserializeOwned;
-
 
 // local machine name, Packet index, packet
-pub type JsonFormat<T> = (String, u32, Packet<T>);
+pub type JsonFormat = (String, u32, Packet);
 
 /// Types of packets
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -22,9 +20,9 @@ pub enum PacketType {
 
 /// Packet 
 #[derive(Serialize, Deserialize)]
-pub struct Packet<T> {
+pub struct Packet {
     /// Actual workload of the packet
-    pub content: Option<T>,
+    pub content: Option<String>,
     /// Packet sent out time
     pub sent_time: SystemTime,
     /// Packet receive time
@@ -34,8 +32,8 @@ pub struct Packet<T> {
 }
 
 
-impl<T> Packet<T> where T: 'static + DeserializeOwned {
-    pub fn new(msg: T) -> Packet<T> {
+impl Packet {
+    pub fn new(msg: String) -> Packet {
         Packet {
             content: Some(msg),
             sent_time: SystemTime::now(),
@@ -44,7 +42,7 @@ impl<T> Packet<T> where T: 'static + DeserializeOwned {
         }
     }
 
-    pub fn get_hb() -> Packet<T> {
+    pub fn get_hb() -> Packet {
         Packet {
             content: None,
             sent_time: SystemTime::now(),
@@ -57,7 +55,7 @@ impl<T> Packet<T> where T: 'static + DeserializeOwned {
         self.receive_time = Some(SystemTime::now());
     }
 
-    pub fn get_receipt(&self) -> Option<Packet<T>> {
+    pub fn get_receipt(&self) -> Option<Packet> {
         if !self.is_workload() && self.packet_type != PacketType::Heartbeat {
             return None;
         }

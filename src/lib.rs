@@ -71,14 +71,14 @@ use perfstats::PerfStats;
 /// sleep(Duration::from_millis(100));
 /// assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 /// ```
-pub struct Network<T: 'static> {
-    outbound_put: Sender<(Option<String>, Packet<T>)>,
+pub struct Network {
+    outbound_put: Sender<(Option<String>, Packet)>,
     perf_stats: Arc<RwLock<PerfStats>>,
     heartbeat_interv_secs: Arc<RwLock<u64>>,
 }
 
 
-impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
+impl Network {
     /// Create a new Network object
     ///
     /// Parameters:
@@ -87,17 +87,17 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     ///   `port` has to be the same value for all machines.
     ///   * `remote_ips` - a list of IPs to which this computer makes a connection initially.
     ///   * `callback` - a callback function to be called when a new packet is received
-    pub fn new(
+    pub fn new<T: 'static + DeserializeOwned>(
         name: &str,
         port: u16,
         remote_ips: &Vec<String>,
         mut callback: Box<dyn FnMut(T) + Sync + Send>,
-    ) -> Network<T> {
+    ) -> Network {
         assert!(remote_ips.len() > 0);
 
         // start the network
         let (outbound_put, outbound_pop):
-            (Sender<(Option<String>, Packet<T>)>, Receiver<(Option<String>, Packet<T>)>)
+            (Sender<(Option<String>, Packet)>, Receiver<(Option<String>, Packet)>)
             = mpsc::channel();
         let perf_stats = Arc::new(RwLock::new(PerfStats::new()));
         let ps = perf_stats.clone();
@@ -107,7 +107,8 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
                 let mut ps = ps.write().unwrap();
                 ps.update(&packet);
                 if packet.is_workload() {
-                    callback(packet.content.unwrap());
+                    let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
+                    callback(content);
                 }
             })).unwrap();
 
@@ -118,7 +119,7 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
         let interval = heartbeat_interv_secs.clone();
         std::thread::spawn(move|| {
             loop {
-                outbound.send((Some(head_ip.clone()), Packet::<T>::get_hb())).unwrap();
+                outbound.send((Some(head_ip.clone()), Packet::get_hb())).unwrap();
                 {
                     let secs = interval.read().unwrap();
                     sleep(Duration::from_secs(*secs));
@@ -134,8 +135,9 @@ impl<T> Network<T> where T: 'static + Send + Serialize + DeserializeOwned {
     }
 
     /// Send out a packet
-    pub fn send(&self, packet: T) -> Result<(), ()> {
-        let ret = self.outbound_put.send((None, Packet::new(packet)));
+    pub fn send<T: Serialize>(&self, packet_load: T) -> Result<(), ()> {
+        let safe_json = serde_json::to_string(&packet_load).unwrap();
+        let ret = self.outbound_put.send((None, Packet::new(safe_json)));
         if ret.is_ok() {
             Ok(())
         } else {

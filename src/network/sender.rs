@@ -8,8 +8,6 @@ use std::sync::RwLock;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread::spawn;
-use serde::ser::Serialize;
-use serde::de::DeserializeOwned;
 
 use packet::JsonFormat;
 use packet::Packet;
@@ -20,10 +18,10 @@ type LockedStream = Arc<RwLock<Stream>>;
 
 
 // Start all sender routines - start local sender and also accept remote senders
-pub fn start_sender<T: 'static + Send + Serialize + DeserializeOwned>(
-    name: String, port: u16, model_recv: Receiver<(Option<String>, Packet<T>)>,
+pub fn start_sender(
+    name: String, port: u16, model_recv: Receiver<(Option<String>, Packet)>,
     remote_ip_send: Option<Sender<SocketAddr>>,
-) -> Result<(), &'static str> where T: Send + Serialize {
+) -> Result<(), &'static str> {
     // Vec<BufStream<TcpStream>>
     let streams = Arc::new(RwLock::new(vec![]));
     // accepts remote connections
@@ -96,8 +94,7 @@ fn income_conn_listener(
 
 
 // Core sender routine - 1 to many
-fn sender<'a, T>(name: String, streams: LockedStream, chan: Receiver<(Option<String>, Packet<T>)>)
-where T: 'static + Send + Serialize + DeserializeOwned {
+fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, Packet)>) {
     info!("1-to-many Sender has started.");
 
     let mut idx = 0;
@@ -117,7 +114,7 @@ where T: 'static + Send + Serialize + DeserializeOwned {
         } else {
             None
         };
-        let packet_load: JsonFormat<T> = (name.clone(), idx, data);
+        let packet_load: JsonFormat = (name.clone(), idx, data);
         let safe_json = serde_json::to_string(&packet_load);
         if let Err(err) = safe_json {
             error!("Local model cannot be serialized. Error: {}", err);

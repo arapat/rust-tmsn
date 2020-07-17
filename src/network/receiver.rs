@@ -8,7 +8,6 @@ use std::sync::RwLock;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::time::Duration;
-use serde::de::DeserializeOwned;
 
 use std::thread::sleep;
 use std::thread::spawn;
@@ -18,10 +17,10 @@ use packet::Packet;
 
 
 // Start all receiver routines
-pub fn start_receiver<T: 'static + Send + DeserializeOwned>(
+pub fn start_receiver(
         name: String, port: u16,
-        outbound_send: Sender<(Option<String>, Packet<T>)>,
-        callback: Box<dyn FnMut(Packet<T>) + Sync + Send>,
+        outbound_send: Sender<(Option<String>, Packet)>,
+        callback: Box<dyn FnMut(Packet) + Sync + Send>,
         remote_ip_recv: Receiver<SocketAddr>) {
     spawn(move|| {
         // If a new neighbor occurs, launch receiver to receive data from it
@@ -61,10 +60,10 @@ pub fn start_receiver<T: 'static + Send + DeserializeOwned>(
 
 
 // Core receiver routine
-pub fn receiver<T: 'static + DeserializeOwned>(
-        name: String, remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
-        outbound_send: Sender<(Option<String>, Packet<T>)>,
-        callback: Arc<RwLock<Box<dyn FnMut(Packet<T>) + Sync + Send>>>,
+pub fn receiver(
+    name: String, remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
+    outbound_send: Sender<(Option<String>, Packet)>,
+    callback: Arc<RwLock<Box<dyn FnMut(Packet) + Sync + Send>>>,
 ) {
     info!("Receiver started from {} to {}", name, remote_ip);
     let mut idx = 0;
@@ -82,7 +81,7 @@ pub fn receiver<T: 'static + DeserializeOwned>(
                 error!("Cannot parse the JSON description of the remote model from {}. \
                         Message ID {}, JSON string is `{}`. Error: {}", remote_ip, idx, json, err);
             } else {
-                let (remote_name, remote_idx, mut packet): JsonFormat<T> = remote_packet.unwrap();
+                let (remote_name, remote_idx, mut packet): JsonFormat = remote_packet.unwrap();
                 debug!("message-received, {}, {}, {}, {}, {}, {}",
                        name, idx, remote_name, remote_idx, remote_ip, json.len());
                 packet.mark_received();

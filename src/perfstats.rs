@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use packet::Packet;
 use packet::PacketType;
 
@@ -32,7 +30,7 @@ impl PerfStats {
     }
 
     /// update the health stats
-    pub fn update<T>(&mut self, packet: &Packet<T>) where T: 'static + DeserializeOwned {
+    pub fn update(&mut self, packet: &Packet) {
         self.total += 1;
         match packet.packet_type {
             PacketType::Message => {
