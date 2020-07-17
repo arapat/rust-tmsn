@@ -169,6 +169,8 @@ impl Network {
 
 #[cfg(test)]
 mod tests {
+    extern crate rand;
+
     use super::Network;
     use std::fs::File;
     use std::io;
@@ -178,6 +180,8 @@ mod tests {
     use std::time::Duration;
     use std::sync::Arc;
     use std::sync::RwLock;
+    use tests::rand::{thread_rng, Rng};
+    use tests::rand::distributions::Alphanumeric;
 
     static MESSAGE: &str = "Hello, this is a test message.";
 
@@ -204,8 +208,40 @@ mod tests {
         let health = network.get_health();
         assert_eq!(health.total, 2 + 2);
         assert_eq!(health.num_hb, 1);
-        println!("roundtrip time, {}, {}",
-            health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
+        // println!("roundtrip time, {}, {}",
+        //     health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
+    }
+
+    fn stress_test(neighbors: Vec<String>, port: u16, load_size: usize) {
+        let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
+        let t = output.clone();
+        let mut network = Network::new("local", port, &neighbors, Box::new(move |msg: String| {
+            let mut t = t.write().unwrap();
+            *t = Some(msg.clone());
+        }));
+        network.set_health_parameter(2);
+        sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+
+        // To send out a text message
+        let message: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(load_size)
+            .collect();
+
+        for _ in 0..100 {
+            network.send(message.clone()).unwrap();
+            sleep(Duration::from_millis(100));
+            let health = network.get_health();
+            println!("stress perf, {}, {}, {}, {}, {}, {}, {}, {}",
+                load_size,
+                health.total,
+                health.num_msg,
+                health.num_hb,
+                health.msg_duration,
+                health.hb_duration,
+                health.get_avg_roundtrip_time_msg(),
+                health.get_avg_roundtrip_time_msg());
+        }
     }
 
     #[test]
@@ -221,6 +257,24 @@ mod tests {
                 neighbors.push(line.unwrap());
             });
             test(neighbors, 8081);
+        }
+    }
+
+    // #[test]
+    // fn test_stress_local() {
+    //     stress_test(vec![String::from("127.0.0.1")], 8082, 1024);
+    // }
+
+    #[test]
+    fn stress_test_network() {
+        let mut neighbors = vec![];
+        if let Ok(lines) = read_lines("./neighbors.txt") {
+            lines.for_each(|line| {
+                neighbors.push(line.unwrap());
+            });
+            for load_size in 1..11 {
+                stress_test(neighbors.clone(), 8082 + load_size as u16, 1024 * load_size);
+            }
         }
     }
 
