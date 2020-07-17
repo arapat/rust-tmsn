@@ -170,6 +170,10 @@ impl Network {
 #[cfg(test)]
 mod tests {
     use super::Network;
+    use std::fs::File;
+    use std::io;
+    use std::io::BufRead;
+    use std::path::Path;
     use std::thread::sleep;
     use std::time::Duration;
     use std::sync::Arc;
@@ -177,12 +181,10 @@ mod tests {
 
     static MESSAGE: &str = "Hello, this is a test message.";
 
-    #[test]
-    fn test() {
-        let neighbors = vec![String::from("127.0.0.1")];
+    fn test(neighbors: Vec<String>, port: u16) {
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let mut network = Network::new("local", 8080, &neighbors, Box::new(move |msg: String| {
+        let mut network = Network::new("local", port, &neighbors, Box::new(move |msg: String| {
             let mut t = t.write().unwrap();
             *t = Some(msg.clone());
         }));
@@ -204,5 +206,27 @@ mod tests {
         assert_eq!(health.num_hb, 1);
         println!("roundtrip time, {}, {}",
             health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
+    }
+
+    #[test]
+    fn test_local() {
+        test(vec![String::from("127.0.0.1")], 8080);
+    }
+
+    #[test]
+    fn test_network() {
+        let mut neighbors = vec![];
+        if let Ok(lines) = read_lines("./neighbors.txt") {
+            lines.for_each(|line| {
+                neighbors.push(line.unwrap());
+            });
+            test(neighbors, 8081);
+        }
+    }
+
+    fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+    where P: AsRef<Path>, {
+        let file = File::open(filename)?;
+        Ok(io::BufReader::new(file).lines())
     }
 }
