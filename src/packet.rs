@@ -42,9 +42,9 @@ impl Packet {
         }
     }
 
-    pub fn get_hb() -> Packet {
+    pub fn get_hb(debug_info: String) -> Packet {
         Packet {
-            content: None,
+            content: Some(debug_info),
             sent_time: SystemTime::now(),
             receive_time: None,
             packet_type: PacketType::Heartbeat,

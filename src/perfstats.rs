@@ -55,4 +55,10 @@ impl PerfStats {
     pub fn get_avg_roundtrip_time_hb(&self) -> f32 {
         self.hb_duration / self.num_hb as f32
     }
+
+    pub fn to_string(&self) -> String {
+        format!("{},{},{},{},{},{},{}",
+            self.total, self.num_msg, self.num_hb, self.msg_duration, self.hb_duration,
+            self.get_avg_roundtrip_time_msg(), self.get_avg_roundtrip_time_hb())
+    }
 }

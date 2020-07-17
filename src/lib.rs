@@ -106,6 +106,7 @@ impl Network {
             Box::new(move |packet| {
                 let mut ps = ps.write().unwrap();
                 ps.update(&packet);
+                drop(ps);
                 if packet.is_workload() {
                     let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
                     callback(content);
@@ -117,9 +118,12 @@ impl Network {
         let head_ip = remote_ips[0].clone();
         let outbound = outbound_put.clone();
         let interval = heartbeat_interv_secs.clone();
+        let ps = perf_stats.clone();
         std::thread::spawn(move|| {
             loop {
-                outbound.send((Some(head_ip.clone()), Packet::get_hb())).unwrap();
+                let ps = ps.read().unwrap();
+                outbound.send((Some(head_ip.clone()), Packet::get_hb(ps.to_string()))).unwrap();
+                drop(ps);
                 {
                     let secs = interval.read().unwrap();
                     sleep(Duration::from_secs(*secs));
