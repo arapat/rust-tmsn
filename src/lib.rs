@@ -193,7 +193,7 @@ mod tests {
             *t = Some(msg.clone());
         }));
         network.set_health_parameter(1);
-        sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+        sleep(Duration::from_millis(1000));  // add waiting in case network is not ready
 
         // To send out a text message
         let message = String::from(MESSAGE);
@@ -219,8 +219,8 @@ mod tests {
             let mut t = t.write().unwrap();
             *t = Some(msg.clone());
         }));
-        network.set_health_parameter(2);
-        sleep(Duration::from_millis(100));  // add waiting in case network is not ready
+        network.set_health_parameter(1);
+        sleep(Duration::from_millis(1000));  // add waiting in case network is not ready
 
         // To send out a text message
         let message: String = thread_rng()
@@ -232,10 +232,11 @@ mod tests {
         if neighbors.len() == 0 {
             for _ in 0..100 {
                 network.send(message.clone()).unwrap();
-                sleep(Duration::from_millis(100));
+                sleep(Duration::from_millis(50));
             }
+        } else {
+            sleep(Duration::from_millis(8000));  // add waiting in case network is not ready
         }
-        sleep(Duration::from_millis(3000));  // add waiting in case network is not ready
         let health = network.get_health();
         println!("stress perf, {}, {}, {}, {}, {}, {}, {}, {}",
             load_size,
