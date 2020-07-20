@@ -133,7 +133,7 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
                 let mut sent_out = 0;
                 streams.iter_mut().enumerate().for_each(|(index, (addr, stream))| {
                     if remote_ip.is_some() && remote_ip.as_ref().unwrap() != addr &&
-                        (index != 0 || addr != &HEAD_NODE.to_string()) {
+                        (index != 0 || remote_ip.as_ref().unwrap() != &HEAD_NODE.to_string()) {
                         return;
                     }
                     if let Err(err) = stream.write_fmt(format_args!("{}\n", json)) {

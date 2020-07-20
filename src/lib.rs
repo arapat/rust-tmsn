@@ -228,20 +228,24 @@ mod tests {
             .take(load_size)
             .collect();
 
-        for _ in 0..100 {
-            network.send(message.clone()).unwrap();
-            sleep(Duration::from_millis(100));
-            let health = network.get_health();
-            println!("stress perf, {}, {}, {}, {}, {}, {}, {}, {}",
-                load_size,
-                health.total,
-                health.num_msg,
-                health.num_hb,
-                health.msg_duration,
-                health.hb_duration,
-                health.get_avg_roundtrip_time_msg(),
-                health.get_avg_roundtrip_time_msg());
+        // only scanners send out packets
+        if neighbors.len() == 0 {
+            for _ in 0..100 {
+                network.send(message.clone()).unwrap();
+                sleep(Duration::from_millis(100));
+            }
         }
+        sleep(Duration::from_millis(3000));  // add waiting in case network is not ready
+        let health = network.get_health();
+        println!("stress perf, {}, {}, {}, {}, {}, {}, {}, {}",
+            load_size,
+            health.total,
+            health.num_msg,
+            health.num_hb,
+            health.msg_duration,
+            health.hb_duration,
+            health.get_avg_roundtrip_time_msg(),
+            health.get_avg_roundtrip_time_msg());
     }
 
     #[test]
@@ -272,8 +276,8 @@ mod tests {
             lines.for_each(|line| {
                 neighbors.push(line.unwrap());
             });
-            for load_size in 1..11 {
-                stress_test(neighbors.clone(), 8082 + load_size as u16, 1024 * load_size);
+            for (index, load_size) in ((0..200).step_by(20)).enumerate() {
+                stress_test(neighbors.clone(), 8082 + index as u16, 1024 * load_size);
             }
         }
     }
