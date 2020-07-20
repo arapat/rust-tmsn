@@ -2,7 +2,6 @@ use bufstream::BufStream;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::net::TcpListener;
-use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc::Receiver;
@@ -13,17 +12,14 @@ use packet::JsonFormat;
 use packet::Packet;
 
 use HEAD_NODE;
-
-
-type Stream = Vec<(String, BufStream<TcpStream>)>;
-type LockedStream = Arc<RwLock<Stream>>;
+use LockedStream;
 
 
 // Start all sender routines - start local sender and also accept remote senders
 pub fn start_sender(
     name: String, port: u16, model_recv: Receiver<(Option<String>, Packet)>,
     remote_ip_send: Option<Sender<SocketAddr>>,
-) -> Result<(), &'static str> {
+) -> Result<LockedStream, &'static str> {
     // Vec<BufStream<TcpStream>>
     let streams = Arc::new(RwLock::new(vec![]));
     // accepts remote connections
@@ -44,10 +40,11 @@ pub fn start_sender(
     });
 
     // Repeatedly sending local data out to the remote connections
+    let streams_clone = streams.clone();
     spawn(move|| {
-        sender(name, streams, model_recv);
+        sender(name, streams_clone, model_recv);
     });
-    Ok(())
+    Ok(streams)
 }
 
 

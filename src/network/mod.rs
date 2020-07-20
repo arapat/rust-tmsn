@@ -7,6 +7,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
 use packet::Packet;
+use LockedStream;
 
 
 ///
@@ -88,13 +89,13 @@ pub fn start_network(
         outbound_send: Sender<(Option<String>, Packet)>,
         outbound_recv: Receiver<(Option<String>, Packet)>,
         callback: Box<dyn FnMut(Packet) + Sync + Send>,
-) -> Result<(), &'static str> {
+) -> Result<LockedStream, &'static str> {
     // receiver initiates the connection
 
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
-    let is_sender_on = {
+    let sender_state = {
         if is_two_way {
             sender::start_sender(
                 name.to_string(), port, outbound_recv, Some(ip_send.clone()))
@@ -102,20 +103,19 @@ pub fn start_network(
             sender::start_sender(name.to_string(), port, outbound_recv, None)
         }
     };
-    if is_sender_on.is_err() {
-        return is_sender_on;
+    if sender_state.is_ok() {
+        // receiver initiates remote connections
+        receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
+        send_initial_ips(init_remote_ips, ip_send, port);
     }
-    // receiver initiates remote connections
-    receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
-    send_initial_ips(init_remote_ips, ip_send, port);
-    Ok(())
+    sender_state
 }
 
 
 #[allow(dead_code)]
 fn start_network_only_send(
         name: &str, port: u16, data_local: Receiver<(Option<String>, Packet)>,
-) -> Result<(), &'static str> {
+) -> Result<LockedStream, &'static str> {
     info!("Starting the network (send only) module.");
     sender::start_sender(name.to_string(), port, data_local, None)
 }

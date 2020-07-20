@@ -26,6 +26,7 @@ pub mod perfstats;
 /// The packet sent out via network
 pub mod packet;
 
+use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc;
@@ -34,6 +35,7 @@ use std::sync::mpsc::Sender;
 use std::thread::sleep;
 use std::time::Duration;
 
+use bufstream::BufStream;
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -41,6 +43,8 @@ use packet::Packet;
 use perfstats::PerfStats;
 
 
+type Stream = Vec<(String, BufStream<TcpStream>)>;
+type LockedStream = Arc<RwLock<Stream>>;
 const HEAD_NODE: &str = "HEAD_NODE";
 
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
@@ -77,6 +81,7 @@ pub struct Network {
     outbound_put: Sender<(Option<String>, Packet)>,
     perf_stats: Arc<RwLock<PerfStats>>,
     heartbeat_interv_secs: Arc<RwLock<u64>>,
+    send_streams: LockedStream,
 }
 
 
@@ -101,7 +106,7 @@ impl Network {
             = mpsc::channel();
         let perf_stats = Arc::new(RwLock::new(PerfStats::new()));
         let ps = perf_stats.clone();
-        network::start_network(
+        let sender_state = network::start_network(
             name, remote_ips, port, true, outbound_put.clone(), outbound_pop,
             Box::new(move |packet| {
                 let mut ps = ps.write().unwrap();
@@ -111,7 +116,7 @@ impl Network {
                     let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
                     callback(content);
                 }
-            })).unwrap();
+            }));
 
         // send heart beat signals
         let heartbeat_interv_secs = Arc::new(RwLock::new(30));
@@ -135,6 +140,7 @@ impl Network {
             outbound_put: outbound_put.clone(),
             perf_stats: perf_stats,
             heartbeat_interv_secs: heartbeat_interv_secs,
+            send_streams: sender_state.unwrap(),
         }
     }
 
@@ -163,6 +169,11 @@ impl Network {
     pub fn get_health(&self) -> PerfStats {
         let ps = self.perf_stats.read().unwrap();
         (*ps).clone()
+    }
+
+    pub fn is_sender_empty(&self) -> bool {
+        let streams = self.send_streams.read().unwrap();
+        streams.len() == 0
     }
 }
 
@@ -206,8 +217,8 @@ mod tests {
 
         sleep(Duration::from_secs(1));
         let health = network.get_health();
-        assert_eq!(health.total, 2 + 2);
-        assert_eq!(health.num_hb, 1);
+        assert_eq!(health.total, 2 + 2 * 2);
+        assert_eq!(health.num_hb, 2);
         // println!("roundtrip time, {}, {}",
         //     health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
     }
@@ -220,7 +231,6 @@ mod tests {
             *t = Some(msg.clone());
         }));
         network.set_health_parameter(1);
-        sleep(Duration::from_millis(1000));  // add waiting in case network is not ready
 
         // To send out a text message
         let message: String = thread_rng()
@@ -230,6 +240,9 @@ mod tests {
 
         // only scanners send out packets
         if neighbors.len() == 0 {
+            while network.is_sender_empty() {
+                sleep(Duration::from_millis(500));
+            }
             for _ in 0..100 {
                 network.send(message.clone()).unwrap();
                 sleep(Duration::from_millis(50));
