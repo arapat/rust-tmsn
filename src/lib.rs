@@ -251,15 +251,7 @@ mod tests {
             sleep(Duration::from_millis(8000));  // add waiting in case network is not ready
         }
         let health = network.get_health();
-        println!("stress perf, {}, {}, {}, {}, {}, {}, {}, {}",
-            load_size,
-            health.total,
-            health.num_msg,
-            health.num_hb,
-            health.msg_duration,
-            health.hb_duration,
-            health.get_avg_roundtrip_time_msg(),
-            health.get_avg_roundtrip_time_msg());
+        println!("stress perf,{},{}", load_size, health.to_string());
     }
 
     #[test]

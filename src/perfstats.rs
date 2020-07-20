@@ -8,8 +8,12 @@ pub struct PerfStats {
     pub total: usize,
     /// total number of messages received
     pub num_msg: usize,
+    /// total number of echo messages received
+    pub num_msg_echo: usize,
     /// total number of heatbeats received
     pub num_hb: usize,
+    /// total number of echo messages to the hearbeats received
+    pub num_hb_echo: usize,
     /// total roundtrip time for sending a packet
     pub msg_duration: f32,
     /// total roundtrip time for sending a heartbeat
@@ -23,7 +27,9 @@ impl PerfStats {
         PerfStats {
             total: 0,
             num_msg: 0,
+            num_msg_echo: 0,
             num_hb: 0,
+            num_hb_echo: 0,
             msg_duration: 0.0,
             hb_duration: 0.0,
         }
@@ -38,12 +44,14 @@ impl PerfStats {
             },
             PacketType::Echo => {
                 self.msg_duration = packet.get_duration();
+                self.num_msg_echo += 1;
             },
             PacketType::Heartbeat => {
                 self.num_hb += 1;
             },
             PacketType::HeartbeatEcho => {
                 self.hb_duration = packet.get_duration();
+                self.num_hb_echo += 1;
             },
         }
     }
@@ -57,8 +65,9 @@ impl PerfStats {
     }
 
     pub fn to_string(&self) -> String {
-        format!("{},{},{},{},{},{},{}",
-            self.total, self.num_msg, self.num_hb, self.msg_duration, self.hb_duration,
+        format!("{},{},{},{},{},{},{},{},{}",
+            self.total, self.num_msg, self.num_msg_echo, self.num_hb, self.num_hb_echo,
+            self.msg_duration, self.hb_duration,
             self.get_avg_roundtrip_time_msg(), self.get_avg_roundtrip_time_hb())
     }
 }
