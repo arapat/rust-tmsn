@@ -43,14 +43,14 @@ impl PerfStats {
                 self.num_msg += 1;
             },
             PacketType::Echo => {
-                self.msg_duration = packet.get_duration();
+                self.msg_duration += packet.get_duration();
                 self.num_msg_echo += 1;
             },
             PacketType::Heartbeat => {
                 self.num_hb += 1;
             },
             PacketType::HeartbeatEcho => {
-                self.hb_duration = packet.get_duration();
+                self.hb_duration += packet.get_duration();
                 self.num_hb_echo += 1;
             },
         }
