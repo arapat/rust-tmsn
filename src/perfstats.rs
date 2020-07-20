@@ -15,9 +15,9 @@ pub struct PerfStats {
     /// total number of echo messages to the hearbeats received
     pub num_hb_echo: usize,
     /// total roundtrip time for sending a packet
-    pub msg_duration: f32,
+    pub msg_duration: u128,
     /// total roundtrip time for sending a heartbeat
-    pub hb_duration: f32,
+    pub hb_duration: u128,
 }
 
 
@@ -30,8 +30,8 @@ impl PerfStats {
             num_msg_echo: 0,
             num_hb: 0,
             num_hb_echo: 0,
-            msg_duration: 0.0,
-            hb_duration: 0.0,
+            msg_duration: 0,
+            hb_duration: 0,
         }
     }
 
@@ -56,12 +56,12 @@ impl PerfStats {
         }
     }
 
-    pub fn get_avg_roundtrip_time_msg(&self) -> f32 {
-        self.msg_duration / self.num_msg as f32
+    pub fn get_avg_roundtrip_time_msg(&self) -> f64 {
+        self.msg_duration as f64 / self.num_msg as f64
     }
 
-    pub fn get_avg_roundtrip_time_hb(&self) -> f32 {
-        self.hb_duration / self.num_hb as f32
+    pub fn get_avg_roundtrip_time_hb(&self) -> f64 {
+        self.hb_duration as f64 / self.num_hb as f64
     }
 
     pub fn to_string(&self) -> String {
