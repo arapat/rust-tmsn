@@ -41,6 +41,8 @@ use packet::Packet;
 use perfstats::PerfStats;
 
 
+const HEAD_NODE: &str = "HEAD_NODE";
+
 /// A structure for communicating over the network in an asynchronous, non-blocking manner
 ///
 /// Example:
@@ -93,8 +95,6 @@ impl Network {
         remote_ips: &Vec<String>,
         mut callback: Box<dyn FnMut(T) + Sync + Send>,
     ) -> Network {
-        assert!(remote_ips.len() > 0);
-
         // start the network
         let (outbound_put, outbound_pop):
             (Sender<(Option<String>, Packet)>, Receiver<(Option<String>, Packet)>)
@@ -115,7 +115,7 @@ impl Network {
 
         // send heart beat signals
         let heartbeat_interv_secs = Arc::new(RwLock::new(30));
-        let head_ip = remote_ips[0].clone();
+        let head_ip = HEAD_NODE.to_string();
         let outbound = outbound_put.clone();
         let interval = heartbeat_interv_secs.clone();
         let ps = perf_stats.clone();

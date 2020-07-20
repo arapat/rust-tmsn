@@ -12,6 +12,8 @@ use std::thread::spawn;
 use packet::JsonFormat;
 use packet::Packet;
 
+use HEAD_NODE;
+
 
 type Stream = Vec<(String, BufStream<TcpStream>)>;
 type LockedStream = Arc<RwLock<Stream>>;
@@ -129,8 +131,9 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
             } else {
                 let mut streams = streams.unwrap();
                 let mut sent_out = 0;
-                streams.iter_mut().for_each(|(addr, stream)| {
-                    if remote_ip.is_some() && remote_ip.as_ref().unwrap() != addr {
+                streams.iter_mut().enumerate().for_each(|(index, (addr, stream))| {
+                    if remote_ip.is_some() && remote_ip.as_ref().unwrap() != addr &&
+                        (index != 0 || addr != &HEAD_NODE.to_string()) {
                         return;
                     }
                     if let Err(err) = stream.write_fmt(format_args!("{}\n", json)) {
