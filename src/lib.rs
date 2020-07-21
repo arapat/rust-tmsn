@@ -81,7 +81,7 @@ pub struct Network {
     outbound_put: Sender<(Option<String>, Packet)>,
     perf_stats: Arc<RwLock<PerfStats>>,
     heartbeat_interv_secs: Arc<RwLock<u64>>,
-    send_streams: LockedStream,
+    _send_streams: LockedStream,
 }
 
 
@@ -135,12 +135,21 @@ impl Network {
                 }
             }
         });
+        let send_streams = sender_state.unwrap();
+        loop {
+            let s = send_streams.read().unwrap();
+            if s.len() > 0 {
+                break;
+            }
+            drop(s);
+            sleep(Duration::from_millis(500));
+        }
 
         Network {
             outbound_put: outbound_put.clone(),
             perf_stats: perf_stats,
             heartbeat_interv_secs: heartbeat_interv_secs,
-            send_streams: sender_state.unwrap(),
+            _send_streams: send_streams,
         }
     }
 
@@ -169,11 +178,6 @@ impl Network {
     pub fn get_health(&self) -> PerfStats {
         let ps = self.perf_stats.read().unwrap();
         (*ps).clone()
-    }
-
-    pub fn is_sender_empty(&self) -> bool {
-        let streams = self.send_streams.read().unwrap();
-        streams.len() == 0
     }
 }
 
@@ -240,9 +244,6 @@ mod tests {
 
         // only scanners send out packets
         if neighbors.len() == 0 {
-            while network.is_sender_empty() {
-                sleep(Duration::from_millis(500));
-            }
             for _ in 0..100 {
                 network.send(message.clone()).unwrap();
                 sleep(Duration::from_millis(50));
