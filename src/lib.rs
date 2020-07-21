@@ -129,10 +129,11 @@ impl Network {
                 let ps = ps.read().unwrap();
                 outbound.send((Some(head_ip.clone()), Packet::get_hb(ps.to_string()))).unwrap();
                 drop(ps);
-                {
-                    let secs = interval.read().unwrap();
-                    sleep(Duration::from_secs(*secs));
-                }
+
+                let interval = interval.read().unwrap();
+                let secs = *interval;
+                drop(interval);
+                sleep(Duration::from_secs(secs));
             }
         });
         let send_streams = sender_state.unwrap();
@@ -221,8 +222,8 @@ mod tests {
 
         sleep(Duration::from_secs(1));
         let health = network.get_health();
-        assert_eq!(health.total, 2 + 2 * 2);
-        assert_eq!(health.num_hb, 2);
+        assert_eq!(health.total, 2);
+        assert_eq!(health.num_hb, 0);
         // println!("roundtrip time, {}, {}",
         //     health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
     }
