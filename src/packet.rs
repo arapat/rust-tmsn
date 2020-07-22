@@ -1,11 +1,13 @@
 use std::time::SystemTime;
 
+use PerfStats;
+
 
 // local machine name, Packet index, packet
 pub type JsonFormat = (String, u32, Packet);
 
 /// Types of packets
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PacketType {
     /// actual information load to be sent out
     Message,
@@ -42,13 +44,20 @@ impl Packet {
         }
     }
 
-    pub fn get_hb(debug_info: String) -> Packet {
+    pub fn get_hb(perf_stats: &PerfStats) -> Packet {
+        let safe_json = serde_json::to_string(perf_stats).unwrap();
         Packet {
-            content: Some(debug_info),
+            content: Some(safe_json),
             sent_time: SystemTime::now(),
             receive_time: None,
             packet_type: PacketType::Heartbeat,
         }
+    }
+
+    pub fn get_hb_workload(&self) -> PerfStats {
+        assert_eq!(self.packet_type, PacketType::Heartbeat);
+        serde_json::from_str(self.content.as_ref().unwrap())
+            .unwrap()
     }
 
     pub fn mark_received(&mut self) {

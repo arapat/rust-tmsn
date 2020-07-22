@@ -2,6 +2,7 @@ use bufstream::BufStream;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::net::TcpListener;
+use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc::Receiver;
@@ -17,7 +18,8 @@ use LockedStream;
 
 // Start all sender routines - start local sender and also accept remote senders
 pub fn start_sender(
-    name: String, port: u16, model_recv: Receiver<(Option<String>, Packet)>,
+    port: u16,
+    packet_recv: Receiver<(Option<String>, Packet)>,
     remote_ip_send: Option<Sender<SocketAddr>>,
 ) -> Result<LockedStream, &'static str> {
     // Vec<BufStream<TcpStream>>
@@ -34,15 +36,10 @@ pub fn start_sender(
         }
         listener.unwrap()
     };
-    let (name_lstn, streams_lstn) = (name.clone(), streams.clone());
-    spawn(move|| {
-        income_conn_listener(name_lstn, streams_lstn, remote_ip_send, listener);
-    });
-
-    // Repeatedly sending local data out to the remote connections
     let streams_clone = streams.clone();
+    // sender will be started inside income_conn_listener
     spawn(move|| {
-        sender(name, streams_clone, model_recv);
+        income_conn_listener(streams_clone, remote_ip_send, listener, packet_recv);
     });
     Ok(streams)
 }
@@ -52,41 +49,65 @@ pub fn start_sender(
 //     1. Add new incoming stream to sender (via streams RwLock)
 //     2. Send new incoming address to receiver so that it connects to the new machine
 fn income_conn_listener(
-        name: String,
-        sender_streams: LockedStream,
-        receiver_ips: Option<Sender<SocketAddr>>,
-        listener: TcpListener) {
-    info!("{} entering sender listener", name);
+    sender_streams: LockedStream,
+    receiver_ips: Option<Sender<SocketAddr>>,
+    listener: TcpListener,
+    packet_recv: Receiver<(Option<String>, Packet)>,
+) {
+    let process_stream = |stream: TcpStream| {
+        let remote_addr = stream.peer_addr().expect(
+            "Cannot unwrap the remote address from the incoming stream."
+        );
+        let local_addr = stream.local_addr().expect(
+            "Cannot unwrap the local address from the incoming stream.");
+        info!("Sender received a connection, {}, ->, {}", remote_addr, local_addr);
+        // append the new stream to sender
+        let mut lock_w = sender_streams.write().expect(
+            "Failed to obtain the lock for expanding sender_streams."
+        );
+        let remote_addr_str = {
+            let s = remote_addr.to_string();
+            let r: Vec<&str> = s.splitn(2, ':').collect();
+            r[0].to_string()
+        };
+        lock_w.push((remote_addr_str, BufStream::new(stream)));
+        drop(lock_w);
+        info!("Remote server {} will receive our model from now on.", remote_addr);
+        // subscribe to the remote machine
+        if let Some(ref receivers) = receiver_ips {
+            receivers.send(remote_addr.clone()).expect(
+                "Cannot send the received IP to the channel."
+            );
+            info!("Remote server {} will be subscribed soon.", remote_addr);
+        }
+    };
+
+    info!("Processing first connection");
+    let mut local_addr = None;
+    while local_addr.is_none() {
+        local_addr = match listener.accept() {
+            Ok((stream, _addr)) => {
+                let local_addr = stream.local_addr().expect(
+                    "Cannot unwrap the local address from the incoming stream.");
+                process_stream(stream);
+                Some(local_addr)
+            }
+            Err(e) => {
+                error!("Couldn't get client during the initialization: {:?}", e);
+                None
+            }
+        };
+    }
+    let streams = sender_streams.clone();
+    spawn(move|| {
+        sender(local_addr.unwrap().to_string(), streams, packet_recv);
+    });
+
+    info!("Entering sender listening mode");
     for stream in listener.incoming() {
         match stream {
             Err(_) => error!("Sender received an error connection."),
-            Ok(stream) => {
-                let remote_addr = stream.peer_addr().expect(
-                    "Cannot unwrap the remote address from the incoming stream."
-                );
-                let local_addr = stream.local_addr().expect(
-                    "Cannot unwrap the local address from the incoming stream.");
-                info!("Sender received a connection, {}, ->, {}", remote_addr, local_addr);
-                // append the new stream to sender
-                let mut lock_w = sender_streams.write().expect(
-                    "Failed to obtain the lock for expanding sender_streams."
-                );
-                let remote_addr_str = {
-                    let s = remote_addr.to_string();
-                    let r: Vec<&str> = s.splitn(2, ':').collect();
-                    r[0].to_string()
-                };
-                lock_w.push((remote_addr_str, BufStream::new(stream)));
-                drop(lock_w);
-                info!("Remote server {} will receive our model from now on.", remote_addr);
-                // subscribe to the remote machine
-                if let Some(ref receivers) = receiver_ips {
-                    receivers.send(remote_addr.clone()).expect(
-                        "Cannot send the received IP to the channel."
-                    );
-                    info!("Remote server {} will be subscribed soon.", remote_addr);
-                }
-            }
+            Ok(stream) => process_stream(stream),
         }
     }
 }

@@ -37,7 +37,6 @@ use LockedStream;
 /// or connected in both directions (both listening to the other).
 ///
 /// ## Parameters
-/// * `name` - the local computer name.
 /// * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
 /// * `port` - the port number that the machines in the network are listening to.
 /// `port` has to be the same value for all machines.
@@ -85,10 +84,10 @@ use LockedStream;
 ///
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
 pub fn start_network(
-        name: &str, init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
+        init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
         outbound_send: Sender<(Option<String>, Packet)>,
         outbound_recv: Receiver<(Option<String>, Packet)>,
-        callback: Box<dyn FnMut(Packet) + Sync + Send>,
+        callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
 ) -> Result<LockedStream, &'static str> {
     // receiver initiates the connection
 
@@ -97,15 +96,14 @@ pub fn start_network(
     // sender accepts remote connections
     let sender_state = {
         if is_two_way {
-            sender::start_sender(
-                name.to_string(), port, outbound_recv, Some(ip_send.clone()))
+            sender::start_sender(port, outbound_recv, Some(ip_send.clone()))
         } else {
-            sender::start_sender(name.to_string(), port, outbound_recv, None)
+            sender::start_sender(port, outbound_recv, None)
         }
     };
     if sender_state.is_ok() {
         // receiver initiates remote connections
-        receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
+        receiver::start_receiver(port, outbound_send, callback, ip_recv);
         send_initial_ips(init_remote_ips, ip_send, port);
     }
     sender_state
@@ -114,22 +112,22 @@ pub fn start_network(
 
 #[allow(dead_code)]
 fn start_network_only_send(
-        name: &str, port: u16, data_local: Receiver<(Option<String>, Packet)>,
+        port: u16, data_local: Receiver<(Option<String>, Packet)>,
 ) -> Result<LockedStream, &'static str> {
     info!("Starting the network (send only) module.");
-    sender::start_sender(name.to_string(), port, data_local, None)
+    sender::start_sender(port, data_local, None)
 }
 
 
 #[allow(dead_code)]
 fn start_network_only_recv(
-    name: &str, remote_ips: &Vec<String>, port: u16,
+    remote_ips: &Vec<String>, port: u16,
     outbound_send: Sender<(Option<String>, Packet)>,
-    callback: Box<dyn FnMut(Packet) + Sync + Send>,
+    callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
 ) -> Result<(), &'static str> {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
-    receiver::start_receiver(name.to_string(), port, outbound_send, callback, ip_recv);
+    receiver::start_receiver(port, outbound_send, callback, ip_recv);
     send_initial_ips(remote_ips, ip_send, port);
     Ok(())
 }

@@ -18,9 +18,9 @@ use packet::Packet;
 
 // Start all receiver routines
 pub fn start_receiver(
-        name: String, port: u16,
+        port: u16,
         outbound_send: Sender<(Option<String>, Packet)>,
-        callback: Box<dyn FnMut(Packet) + Sync + Send>,
+        callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
         remote_ip_recv: Receiver<SocketAddr>) {
     spawn(move|| {
         // If a new neighbor occurs, launch receiver to receive data from it
@@ -30,7 +30,6 @@ pub fn start_receiver(
         while let Ok(mut remote_addr) = remote_ip_recv.recv() {
             remote_addr.set_port(port);
             if !receivers.contains(&remote_addr) {
-                let name_clone = name.clone();
                 let callback = f.clone();
                 let addr = remote_addr.clone();
                 let outbound = outbound_send.clone();
@@ -49,7 +48,7 @@ pub fn start_receiver(
                         };
                     }
                     let stream = BufStream::new(tcp_stream.unwrap());
-                    receiver(name_clone, addr, stream, outbound, callback);
+                    receiver(addr, stream, outbound, callback);
                 });
             } else {
                 info!("(Skipped) Receiver exists for {}", remote_addr);
@@ -61,11 +60,11 @@ pub fn start_receiver(
 
 // Core receiver routine
 pub fn receiver(
-    name: String, remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
+    remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
     outbound_send: Sender<(Option<String>, Packet)>,
-    callback: Arc<RwLock<Box<dyn FnMut(Packet) + Sync + Send>>>,
+    callback: Arc<RwLock<Box<dyn FnMut(String, Packet) + Sync + Send>>>,
 ) {
-    info!("Receiver started from {} to {}", name, remote_ip);
+    info!("Receiver started {}", remote_ip);
     let mut idx = 0;
     loop {
         let mut json = String::new();
@@ -82,12 +81,12 @@ pub fn receiver(
                         Message ID {}, JSON string is `{}`. Error: {}", remote_ip, idx, json, err);
             } else {
                 let (remote_name, remote_idx, mut packet): JsonFormat = remote_packet.unwrap();
-                debug!("message-received, {}, {}, {}, {}, {}, {}",
-                       name, idx, remote_name, remote_idx, remote_ip, json.len());
+                debug!("message-received, {}, {}, {}, {}, {}",
+                       idx, remote_name, remote_idx, remote_ip, json.len());
                 packet.mark_received();
                 let f = &mut *(callback.write().unwrap());
                 let receipt = packet.get_receipt();
-                f(packet);
+                f(remote_name, packet);
                 if receipt.is_some() {
                     outbound_send.send((Some(remote_ip.to_string()), receipt.unwrap())).unwrap();
                 }

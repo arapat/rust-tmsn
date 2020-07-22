@@ -62,7 +62,7 @@ const HEAD_NODE: &str = "HEAD_NODE";
 /// let neighbors = vec![String::from("127.0.0.1")];
 /// let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 /// let t = output.clone();
-/// let network = Network::new("local", 8080, &neighbors, Box::new(move |msg: String| {
+/// let network = Network::new(8080, &neighbors, Box::new(move |msg: String| {
 ///     let mut t = t.write().unwrap();
 ///     *t = Some(msg.clone());
 /// }));
@@ -95,7 +95,6 @@ impl Network {
     ///   * `remote_ips` - a list of IPs to which this computer makes a connection initially.
     ///   * `callback` - a callback function to be called when a new packet is received
     pub fn new<T: 'static + DeserializeOwned>(
-        name: &str,
         port: u16,
         remote_ips: &Vec<String>,
         mut callback: Box<dyn FnMut(T) + Sync + Send>,
@@ -107,10 +106,10 @@ impl Network {
         let perf_stats = Arc::new(RwLock::new(PerfStats::new()));
         let ps = perf_stats.clone();
         let sender_state = network::start_network(
-            name, remote_ips, port, true, outbound_put.clone(), outbound_pop,
-            Box::new(move |packet| {
+            remote_ips, port, true, outbound_put.clone(), outbound_pop,
+            Box::new(move |name, packet| {
                 let mut ps = ps.write().unwrap();
-                ps.update(&packet);
+                ps.update(name, &packet);
                 drop(ps);
                 if packet.is_workload() {
                     let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
@@ -127,7 +126,7 @@ impl Network {
         std::thread::spawn(move|| {
             loop {
                 let ps = ps.read().unwrap();
-                outbound.send((Some(head_ip.clone()), Packet::get_hb(ps.to_string()))).unwrap();
+                outbound.send((Some(head_ip.clone()), Packet::get_hb(&ps))).unwrap();
                 drop(ps);
 
                 let interval = interval.read().unwrap();
@@ -204,7 +203,7 @@ mod tests {
     fn test(neighbors: Vec<String>, port: u16) {
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let mut network = Network::new("local", port, &neighbors, Box::new(move |msg: String| {
+        let mut network = Network::new(port, &neighbors, Box::new(move |msg: String| {
             let mut t = t.write().unwrap();
             *t = Some(msg.clone());
         }));
@@ -222,8 +221,8 @@ mod tests {
 
         sleep(Duration::from_secs(1));
         let health = network.get_health();
-        assert_eq!(health.total, 2);
-        assert_eq!(health.num_hb, 0);
+        assert_eq!(health.total, 2 + 2);
+        assert_eq!(health.num_hb, 1);
         // println!("roundtrip time, {}, {}",
         //     health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
     }
@@ -231,7 +230,7 @@ mod tests {
     fn stress_test(neighbors: Vec<String>, port: u16, load_size: usize) {
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let mut network = Network::new("local", port, &neighbors, Box::new(move |msg: String| {
+        let mut network = Network::new(port, &neighbors, Box::new(move |msg: String| {
             let mut t = t.write().unwrap();
             *t = Some(msg.clone());
         }));
@@ -253,7 +252,11 @@ mod tests {
             sleep(Duration::from_millis(8000));  // add waiting in case network is not ready
         }
         let health = network.get_health();
-        println!("stress perf,{},{}", load_size, health.to_string());
+
+        println!("stress perf,{},local,{}", load_size, health.to_string());
+        for (addr, health) in health.others.iter() {
+            println!("stress perf,{},{},{}", addr, load_size, health.to_string());
+        }
     }
 
     #[test]

@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use packet::Packet;
 use packet::PacketType;
 
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PerfStats {
     /// total number of packets received (messages + heartbeats + echos)
     pub total: usize,
@@ -18,6 +20,8 @@ pub struct PerfStats {
     pub msg_duration: u128,
     /// total roundtrip time for sending a heartbeat
     pub hb_duration: u128,
+    /// perf stats of other machines
+    pub others: HashMap<String, PerfStats>,
 }
 
 
@@ -32,11 +36,12 @@ impl PerfStats {
             num_hb_echo: 0,
             msg_duration: 0,
             hb_duration: 0,
+            others: HashMap::new(),
         }
     }
 
     /// update the health stats
-    pub fn update(&mut self, packet: &Packet) {
+    pub fn update(&mut self, name: String, packet: &Packet) {
         self.total += 1;
         match packet.packet_type {
             PacketType::Message => {
@@ -48,6 +53,11 @@ impl PerfStats {
             },
             PacketType::Heartbeat => {
                 self.num_hb += 1;
+                self.others.insert(
+                    name,
+                    serde_json::from_str(packet.content.as_ref().unwrap())
+                        .unwrap()
+                );
             },
             PacketType::HeartbeatEcho => {
                 self.hb_duration += packet.get_duration();
