@@ -40,6 +40,27 @@ impl PerfStats {
         }
     }
 
+    pub fn from_json(json: &String) -> PerfStats {
+        serde_json::from_str(json).unwrap()
+    }
+
+    fn new_local(ps: &PerfStats) -> PerfStats {
+        PerfStats {
+            total: ps.total,
+            num_msg: ps.num_msg,
+            num_msg_echo: ps.num_msg_echo,
+            num_hb: ps.num_hb,
+            num_hb_echo: ps.num_hb_echo,
+            msg_duration: ps.msg_duration,
+            hb_duration: ps.hb_duration,
+            others: HashMap::new(),
+        }
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&PerfStats::new_local(self)).unwrap()
+    }
+
     /// update the health stats
     pub fn update(&mut self, name: String, packet: &Packet) {
         self.total += 1;
@@ -55,8 +76,7 @@ impl PerfStats {
                 self.num_hb += 1;
                 self.others.insert(
                     name,
-                    serde_json::from_str(packet.content.as_ref().unwrap())
-                        .unwrap()
+                    PerfStats::from_json(packet.content.as_ref().unwrap())
                 );
             },
             PacketType::HeartbeatEcho => {

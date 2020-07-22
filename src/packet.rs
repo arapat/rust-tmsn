@@ -45,19 +45,12 @@ impl Packet {
     }
 
     pub fn get_hb(perf_stats: &PerfStats) -> Packet {
-        let safe_json = serde_json::to_string(perf_stats).unwrap();
         Packet {
-            content: Some(safe_json),
+            content: Some(perf_stats.to_json()),
             sent_time: SystemTime::now(),
             receive_time: None,
             packet_type: PacketType::Heartbeat,
         }
-    }
-
-    pub fn get_hb_workload(&self) -> PerfStats {
-        assert_eq!(self.packet_type, PacketType::Heartbeat);
-        serde_json::from_str(self.content.as_ref().unwrap())
-            .unwrap()
     }
 
     pub fn mark_received(&mut self) {
