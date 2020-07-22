@@ -218,7 +218,7 @@ mod tests {
 
         // The message above is supposed to send out to all the neighbors computers specified
         // in the `network` vector, which contains only the localhost.
-        sleep(Duration::from_millis(100));
+        sleep(Duration::from_secs(1));
         assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 
         sleep(Duration::from_secs(1));
@@ -283,15 +283,17 @@ mod tests {
 
     #[test]
     fn stress_test_network() {
-        let load_mul = vec![1, 5, 10, 100, 200];
+        let load_mul: Vec<usize> = vec![1, 5, 10, 100, 200];
         let mut neighbors = vec![];
         if let Ok(lines) = read_lines("./neighbors.txt") {
             lines.for_each(|line| {
                 neighbors.push(line.unwrap());
             });
-            for (index, load_size) in load_mul.iter().enumerate() {
-                println!();
-                stress_test(neighbors.clone(), 8082 + index as u16, 1024 * load_size);
+            for _repeat in 0..10 {
+                println!("\nstart new test");
+                for (index, load_size) in load_mul.iter().enumerate() {
+                    stress_test(neighbors.clone(), 8082 + index as u16, 1024 * load_size);
+                }
             }
         }
     }
