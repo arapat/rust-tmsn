@@ -117,6 +117,17 @@ impl Network {
                 }
             }));
 
+        // check if network is ready
+        let send_streams = sender_state.unwrap();
+        loop {
+            let s = send_streams.read().unwrap();
+            if s.len() > 0 {
+                break;
+            }
+            drop(s);
+            sleep(Duration::from_millis(500));
+        }
+
         // send heart beat signals
         let heartbeat_interv_secs = Arc::new(RwLock::new(30));
         let head_ip = HEAD_NODE.to_string();
@@ -135,15 +146,6 @@ impl Network {
                 sleep(Duration::from_secs(secs));
             }
         });
-        let send_streams = sender_state.unwrap();
-        loop {
-            let s = send_streams.read().unwrap();
-            if s.len() > 0 {
-                break;
-            }
-            drop(s);
-            sleep(Duration::from_millis(500));
-        }
 
         Network {
             outbound_put: outbound_put.clone(),
@@ -221,10 +223,9 @@ mod tests {
 
         sleep(Duration::from_secs(1));
         let health = network.get_health();
-        assert_eq!(health.total, 2 + 2);
-        assert_eq!(health.num_hb, 1);
-        // println!("roundtrip time, {}, {}",
-        //     health.get_avg_roundtrip_time_msg(), health.get_avg_roundtrip_time_msg());
+        assert_eq!(health.num_msg, 1);
+        assert_eq!(health.num_msg_echo, 1);
+        assert!(health.num_hb > 0);
     }
 
     fn stress_test(neighbors: Vec<String>, port: u16, load_size: usize) {
