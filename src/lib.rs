@@ -228,7 +228,9 @@ mod tests {
         assert!(health.num_hb > 0);
     }
 
-    fn stress_test(neighbors: Vec<String>, port: u16, load_size: usize) {
+    fn stress_test(neighbors: Vec<String>, port: u16, load_size: usize, pkg_interval: u64) {
+        println!("load_size,{},pkg_interval,{}", load_size, pkg_interval);
+
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
         let mut network = Network::new(port, &neighbors, Box::new(move |msg: String| {
@@ -247,7 +249,7 @@ mod tests {
         if neighbors.len() == 0 {
             for _ in 0..100 {
                 network.send(message.clone()).unwrap();
-                sleep(Duration::from_millis(50));
+                sleep(Duration::from_millis(pkg_interval));
             }
         } else {
             sleep(Duration::from_millis(8000));  // add waiting in case network is not ready
@@ -284,8 +286,7 @@ mod tests {
     //     stress_test(vec![String::from("127.0.0.1")], 8082, 1024);
     // }
 
-    #[test]
-    fn stress_test_network() {
+    fn stress_test_network(pkg_interval: u64) {
         let load_mul: Vec<usize> = vec![1, 1, 5, 10, 100, 200, 1];
         let num_loads = load_mul.len();
         let mut neighbors = vec![];
@@ -297,10 +298,15 @@ mod tests {
                 println!("\nstart new test, {}", repeat);
                 for (index, load_size) in load_mul.iter().enumerate() {
                     let port = 8082 + (repeat * num_loads + index);
-                    stress_test(neighbors.clone(), port as u16, 1024 * load_size);
+                    stress_test(neighbors.clone(), port as u16, 1024 * load_size, pkg_interval);
                 }
             }
         }
+    }
+
+    #[test]
+    fn stress_test_network_10() {
+        stress_test_network(10);
     }
 
     fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
