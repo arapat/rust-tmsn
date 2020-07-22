@@ -270,7 +270,10 @@ mod tests {
         let mut neighbors = vec![];
         if let Ok(lines) = read_lines("./neighbors.txt") {
             lines.for_each(|line| {
-                neighbors.push(line.unwrap());
+                let addr = line.unwrap();
+                if addr.trim().len() > 0 {
+                    neighbors.push(addr.to_string());
+                }
             });
             test(neighbors, 8081);
         }
@@ -283,7 +286,7 @@ mod tests {
 
     #[test]
     fn stress_test_network() {
-        let load_mul: Vec<usize> = vec![1, 5, 10, 100, 200];
+        let load_mul: Vec<usize> = vec![1, 1, 5, 10, 100, 200, 1];
         let num_loads = load_mul.len();
         let mut neighbors = vec![];
         if let Ok(lines) = read_lines("./neighbors.txt") {
