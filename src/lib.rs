@@ -256,7 +256,7 @@ mod tests {
 
         println!("stress perf,{},local,{}", load_size, health.to_string());
         for (addr, health) in health.others.iter() {
-            println!("stress perf,{},{},{}", addr, load_size, health.to_string());
+            println!("stress perf,{},{},{}", load_size, addr, health.to_string());
         }
     }
 
@@ -283,12 +283,14 @@ mod tests {
 
     #[test]
     fn stress_test_network() {
+        let load_mul = vec![1, 5, 10, 100, 200];
         let mut neighbors = vec![];
         if let Ok(lines) = read_lines("./neighbors.txt") {
             lines.for_each(|line| {
                 neighbors.push(line.unwrap());
             });
-            for (index, load_size) in ((0..200).step_by(20)).enumerate() {
+            for (index, load_size) in load_mul.iter().enumerate() {
+                println!();
                 stress_test(neighbors.clone(), 8082 + index as u16, 1024 * load_size);
             }
         }
