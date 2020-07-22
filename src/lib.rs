@@ -284,15 +284,17 @@ mod tests {
     #[test]
     fn stress_test_network() {
         let load_mul: Vec<usize> = vec![1, 5, 10, 100, 200];
+        let num_loads = load_mul.len();
         let mut neighbors = vec![];
         if let Ok(lines) = read_lines("./neighbors.txt") {
             lines.for_each(|line| {
                 neighbors.push(line.unwrap());
             });
-            for _repeat in 0..10 {
-                println!("\nstart new test");
+            for repeat in 0..10 {
+                println!("\nstart new test, {}", repeat);
                 for (index, load_size) in load_mul.iter().enumerate() {
-                    stress_test(neighbors.clone(), 8082 + index as u16, 1024 * load_size);
+                    let port = 8082 + (repeat * num_loads + index);
+                    stress_test(neighbors.clone(), port as u16, 1024 * load_size);
                 }
             }
         }
