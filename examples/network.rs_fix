@@ -1,8 +1,8 @@
-extern crate rust_tmsn;
+extern crate tmsn;
 
 use std::sync::mpsc;
 use std::thread::sleep;
-use rust_tmsn::network::start_network;
+use tmsn::network::start_network;
 
 use std::time::Duration;
 

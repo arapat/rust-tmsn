@@ -2,14 +2,12 @@ mod sender;
 mod receiver;
 
 use std::net::SocketAddr;
+use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
-use serde::ser::Serialize;
-use serde::de::DeserializeOwned;
-
-use std::sync::mpsc;
-
+use packet::Packet;
+use LockedStream;
 
 
 ///
@@ -39,7 +37,6 @@ use std::sync::mpsc;
 /// or connected in both directions (both listening to the other).
 ///
 /// ## Parameters
-/// * `name` - the local computer name.
 /// * `init_remote_ips` - a list of IPs to which this computer makes a connection initially.
 /// * `port` - the port number that the machines in the network are listening to.
 /// `port` has to be the same value for all machines.
@@ -66,36 +63,6 @@ use std::sync::mpsc;
 /// The network structure between the machines are decided by your program, specifically by
 /// explicitly setting the list of IPs to be subscribed from each machine.
 ///
-/// ## Example
-/// ```
-/// use std::sync::mpsc;
-/// use std::thread::sleep;
-/// use rust_tmsn::network::start_network;
-///
-/// use std::time::Duration;
-///
-/// // Remote data queue, where the data received from network would be put
-/// let (remote_data_send, remote_data_recv) = mpsc::channel();
-/// // Local data queue, where the data generated locally would be put
-/// let (local_data_send, local_data_recv) = mpsc::channel();
-///
-/// let network = vec![String::from("127.0.0.1")];
-/// start_network("local", &network, 8000, false, remote_data_send, local_data_recv);
-///
-/// // Put a test message in the local_data
-/// let message = String::from("Hello, this is a test message.");
-/// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
-/// local_data_send.send(message.clone()).unwrap();
-/// println!("Sent out this message: {}", message);
-///
-/// // The message above is supposed to send out to all the neighbors computers specified
-/// // in the `network` vector, which contains only the localhost.
-/// // The network module running on the local host should have received the message
-/// // and put it into the remote data queue.
-/// let data_received = remote_data_recv.recv().unwrap();
-/// assert_eq!(data_received, message);
-/// ```
-///
 /// ## Design
 ///
 /// Initially, the local computer only connects to the computers specificed by the
@@ -116,43 +83,51 @@ use std::sync::mpsc;
 /// The full workflow of the network module is described in the following plot.
 ///
 /// ![](https://www.lucidchart.com/publicSegments/view/9c3b7a65-55ad-4df5-a5cb-f3154b692ecd/image.png)
-pub fn start_network<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: &str, init_remote_ips: &Vec<String>, port: u16,
-        is_two_way: bool, data_remote: Sender<T>, data_local: Receiver<T>,
-) -> Result<(), &'static str> {
+pub fn start_network(
+        init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
+        outbound_send: Sender<(Option<String>, Packet)>,
+        outbound_recv: Receiver<(Option<String>, Packet)>,
+        callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
+) -> Result<LockedStream, &'static str> {
+    // receiver initiates the connection
+
     info!("Starting the network module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
     // sender accepts remote connections
-    let is_sender_on = {
+    let sender_state = {
         if is_two_way {
-            sender::start_sender(name.to_string(), port, data_local, Some(ip_send.clone()))
+            sender::start_sender(port, outbound_recv, Some(ip_send.clone()))
         } else {
-            sender::start_sender(name.to_string(), port, data_local, None)
+            sender::start_sender(port, outbound_recv, None)
         }
     };
-    if is_sender_on.is_err() {
-        return is_sender_on;
+    if sender_state.is_ok() {
+        // receiver initiates remote connections
+        receiver::start_receiver(port, outbound_send, callback, ip_recv);
+        send_initial_ips(init_remote_ips, ip_send, port);
     }
-    // receiver initiates remote connections
-    receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
-    send_initial_ips(init_remote_ips, ip_send, port);
-    Ok(())
+    sender_state
 }
 
 
-pub fn start_network_only_send<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: &str, port: u16, data_local: Receiver<T>) -> Result<(), &'static str> {
+#[allow(dead_code)]
+fn start_network_only_send(
+        port: u16, data_local: Receiver<(Option<String>, Packet)>,
+) -> Result<LockedStream, &'static str> {
     info!("Starting the network (send only) module.");
-    sender::start_sender(name.to_string(), port, data_local, None)
+    sender::start_sender(port, data_local, None)
 }
 
 
-pub fn start_network_only_recv<T: 'static + Send + Serialize + DeserializeOwned>(
-        name: &str, remote_ips: &Vec<String>, port: u16, data_remote: Sender<T>,
+#[allow(dead_code)]
+fn start_network_only_recv(
+    remote_ips: &Vec<String>, port: u16,
+    outbound_send: Sender<(Option<String>, Packet)>,
+    callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
 ) -> Result<(), &'static str> {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();
-    receiver::start_receiver(name.to_string(), port, data_remote, ip_recv);
+    receiver::start_receiver(port, outbound_send, callback, ip_recv);
     send_initial_ips(remote_ips, ip_send, port);
     Ok(())
 }

@@ -1,11 +1,13 @@
 use std::time::SystemTime;
 
-use serde::ser::Serialize;
-use serde::de::DeserializeOwned;
+use PerfStats;
 
+
+// local machine name, Packet index, packet
+pub type JsonFormat = (String, u32, Packet);
 
 /// Types of packets
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PacketType {
     /// actual information load to be sent out
     Message,
@@ -20,9 +22,9 @@ pub enum PacketType {
 
 /// Packet 
 #[derive(Serialize, Deserialize)]
-pub struct Packet<T> {
+pub struct Packet {
     /// Actual workload of the packet
-    pub content: Option<T>,
+    pub content: Option<String>,
     /// Packet sent out time
     pub sent_time: SystemTime,
     /// Packet receive time
@@ -32,8 +34,8 @@ pub struct Packet<T> {
 }
 
 
-impl<T> Packet<T> where T: 'static + Send + Serialize + DeserializeOwned {
-    pub fn new(msg: T) -> Packet<T> {
+impl Packet {
+    pub fn new(msg: String) -> Packet {
         Packet {
             content: Some(msg),
             sent_time: SystemTime::now(),
@@ -42,9 +44,9 @@ impl<T> Packet<T> where T: 'static + Send + Serialize + DeserializeOwned {
         }
     }
 
-    pub fn get_hb() -> Packet<T> {
+    pub fn get_hb(perf_stats: &PerfStats) -> Packet {
         Packet {
-            content: None,
+            content: Some(perf_stats.to_json()),
             sent_time: SystemTime::now(),
             receive_time: None,
             packet_type: PacketType::Heartbeat,
@@ -55,21 +57,32 @@ impl<T> Packet<T> where T: 'static + Send + Serialize + DeserializeOwned {
         self.receive_time = Some(SystemTime::now());
     }
 
-    pub fn get_receipt(&self) -> Packet<T> {
-        assert!(self.receive_time.is_some());
-        assert!(self.packet_type == PacketType::Message ||
-                self.packet_type == PacketType::Heartbeat);
+    pub fn get_receipt(&self) -> Option<Packet> {
+        if !self.is_workload() && self.packet_type != PacketType::Heartbeat {
+            return None;
+        }
         let echo_type =
-            if self.packet_type == PacketType::Message {
+            if self.is_workload() {
                 PacketType::Echo
             } else {
                 PacketType::HeartbeatEcho
             };
-        Packet {
+        Some(Packet {
             content: None,
             sent_time: self.sent_time.clone(),
             receive_time: self.receive_time.clone(),
             packet_type: echo_type,
-        }
+        })
+    }
+
+    pub fn is_workload(&self) -> bool {
+        self.packet_type == PacketType::Message
+    }
+
+    pub fn get_duration(&self) -> u128 {
+        self.receive_time.unwrap()
+            .duration_since(self.sent_time)
+            .unwrap()
+            .as_micros()
     }
 }
