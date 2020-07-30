@@ -62,10 +62,13 @@ const HEAD_NODE: &str = "HEAD_NODE";
 /// let neighbors = vec![String::from("127.0.0.1")];
 /// let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 /// let t = output.clone();
-/// let network = Network::new(8080, &neighbors, Box::new(move |msg: String| {
-///     let mut t = t.write().unwrap();
-///     *t = Some(msg.clone());
-/// }));
+/// let network = Network::new(
+///     8080, &neighbors,
+///     Box::new(move |sender: String, receiver: String, msg: String| {
+///         let mut t = t.write().unwrap();
+///         *t = Some(msg.clone());
+///     }
+/// ));
 /// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
 ///
 /// // To send out a text message
@@ -97,7 +100,7 @@ impl Network {
     pub fn new<T: 'static + DeserializeOwned>(
         port: u16,
         remote_ips: &Vec<String>,
-        mut callback: Box<dyn FnMut(T) + Sync + Send>,
+        mut callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
     ) -> Network {
         // start the network
         let (outbound_put, outbound_pop):
@@ -107,13 +110,13 @@ impl Network {
         let ps = perf_stats.clone();
         let sender_state = network::start_network(
             remote_ips, port, true, outbound_put.clone(), outbound_pop,
-            Box::new(move |name, packet| {
+            Box::new(move |sender_name, receiver_name, packet| {
                 let mut ps = ps.write().unwrap();
-                ps.update(name, &packet);
+                ps.update(sender_name.clone(), &packet);
                 drop(ps);
                 if packet.is_workload() {
                     let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
-                    callback(content);
+                    callback(sender_name, receiver_name, content);
                 }
             }));
 
@@ -205,10 +208,13 @@ mod tests {
     fn test(neighbors: Vec<String>, port: u16) {
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let mut network = Network::new(port, &neighbors, Box::new(move |msg: String| {
-            let mut t = t.write().unwrap();
-            *t = Some(msg.clone());
-        }));
+        let mut network = Network::new(
+            port, &neighbors,
+            Box::new(move |_s: String, _r: String, msg: String| {
+                let mut t = t.write().unwrap();
+                *t = Some(msg.clone());
+            }
+        ));
         network.set_health_parameter(1);
         sleep(Duration::from_millis(1000));  // add waiting in case network is not ready
 
@@ -233,10 +239,12 @@ mod tests {
 
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
-        let mut network = Network::new(port, &neighbors, Box::new(move |msg: String| {
-            let mut t = t.write().unwrap();
-            *t = Some(msg.clone());
-        }));
+        let mut network = Network::new(port, &neighbors,
+            Box::new(move |_s: String, _r: String, msg: String| {
+                let mut t = t.write().unwrap();
+                *t = Some(msg.clone());
+            }
+        ));
         network.set_health_parameter(1);
 
         // To send out a text message

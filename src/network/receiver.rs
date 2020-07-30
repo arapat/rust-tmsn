@@ -20,7 +20,7 @@ use packet::Packet;
 pub fn start_receiver(
         port: u16,
         outbound_send: Sender<(Option<String>, Packet)>,
-        callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
+        callback: Box<dyn FnMut(String, String, Packet) + Sync + Send>,
         remote_ip_recv: Receiver<SocketAddr>) {
     spawn(move|| {
         // If a new neighbor occurs, launch receiver to receive data from it
@@ -62,7 +62,7 @@ pub fn start_receiver(
 pub fn receiver(
     remote_ip: SocketAddr, mut stream: BufStream<TcpStream>,
     outbound_send: Sender<(Option<String>, Packet)>,
-    callback: Arc<RwLock<Box<dyn FnMut(String, Packet) + Sync + Send>>>,
+    callback: Arc<RwLock<Box<dyn FnMut(String, String, Packet) + Sync + Send>>>,
 ) {
     info!("Receiver started {}", remote_ip);
     let mut idx = 0;
@@ -80,13 +80,14 @@ pub fn receiver(
                 error!("Cannot parse the JSON description of the remote model from {}. \
                         Message ID {}, JSON string is `{}`. Error: {}", remote_ip, idx, json, err);
             } else {
-                let (remote_name, remote_idx, mut packet): JsonFormat = remote_packet.unwrap();
+                let (sender_name, receiver_name, remote_idx, mut packet): JsonFormat =
+                    remote_packet.unwrap();
                 debug!("message-received, {}, {}, {}, {}, {}",
-                       idx, remote_name, remote_idx, remote_ip, json.len());
+                       idx, sender_name, remote_idx, remote_ip, json.len());
                 packet.mark_received();
                 let f = &mut *(callback.write().unwrap());
                 let receipt = packet.get_receipt();
-                f(remote_name, packet);
+                f(sender_name, receiver_name, packet);
                 if receipt.is_some() {
                     outbound_send.send((Some(remote_ip.to_string()), receipt.unwrap())).unwrap();
                 }

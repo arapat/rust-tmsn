@@ -87,7 +87,7 @@ pub fn start_network(
         init_remote_ips: &Vec<String>, port: u16, is_two_way: bool,
         outbound_send: Sender<(Option<String>, Packet)>,
         outbound_recv: Receiver<(Option<String>, Packet)>,
-        callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
+        callback: Box<dyn FnMut(String, String, Packet) + Sync + Send>,
 ) -> Result<LockedStream, &'static str> {
     // receiver initiates the connection
 
@@ -123,7 +123,7 @@ fn start_network_only_send(
 fn start_network_only_recv(
     remote_ips: &Vec<String>, port: u16,
     outbound_send: Sender<(Option<String>, Packet)>,
-    callback: Box<dyn FnMut(String, Packet) + Sync + Send>,
+    callback: Box<dyn FnMut(String, String, Packet) + Sync + Send>,
 ) -> Result<(), &'static str> {
     info!("Starting the network (receive only) module.");
     let (ip_send, ip_recv): (Sender<SocketAddr>, Receiver<SocketAddr>) = mpsc::channel();

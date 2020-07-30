@@ -114,7 +114,7 @@ fn income_conn_listener(
 
 
 // Core sender routine - 1 to many
-fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, Packet)>) {
+fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<String>, Packet)>) {
     info!("1-to-many Sender has started.");
 
     let mut idx = 0;
@@ -124,7 +124,7 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
             error!("Network module cannot receive the local model. Error: {}", err);
             continue;
         }
-        debug!("network-to-send-out, {}, {}", name, idx);
+        debug!("network-to-send-out, {}, {}", local_addr, idx);
 
         let (remote_ip, data) = data.unwrap();
         let remote_ip = if remote_ip.is_some() {
@@ -134,13 +134,6 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
         } else {
             None
         };
-        let packet_load: JsonFormat = (name.clone(), idx, data);
-        let safe_json = serde_json::to_string(&packet_load);
-        if let Err(err) = safe_json {
-            error!("Local model cannot be serialized. Error: {}", err);
-            continue;
-        }
-        let json = safe_json.unwrap();
         let num_computers = {
             let streams = streams.write();
             if let Err(err) = streams {
@@ -149,11 +142,14 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
             } else {
                 let mut streams = streams.unwrap();
                 let mut sent_out = 0;
-                streams.iter_mut().enumerate().for_each(|(index, (addr, stream))| {
-                    if remote_ip.is_some() && remote_ip.as_ref().unwrap() != addr &&
+                streams.iter_mut().enumerate().for_each(|(index, (remote_addr, stream))| {
+                    if remote_ip.is_some() && remote_ip.as_ref().unwrap() != remote_addr &&
                         (index != 0 || remote_ip.as_ref().unwrap() != &HEAD_NODE.to_string()) {
                         return;
                     }
+                    let packet_load: JsonFormat =
+                        (local_addr.clone(), remote_addr.clone(), idx, data.clone());
+                    let json = serde_json::to_string(&packet_load).unwrap();
                     if let Err(err) = stream.write_fmt(format_args!("{}\n", json)) {
                         error!("Cannot write into one of the streams. Error: {}", err);
                     } else {
@@ -167,7 +163,7 @@ fn sender(name: String, streams: LockedStream, chan: Receiver<(Option<String>, P
                 sent_out
             }
         };
-        debug!("network-sent-out, {}, {}, {}", name, idx, num_computers);
+        debug!("network-sent-out, {}, {}, {}", local_addr, idx, num_computers);
         idx += 1;
     }
 }
