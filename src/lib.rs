@@ -19,26 +19,28 @@ extern crate bufstream;
 extern crate serde;
 extern crate serde_json;
 
-/// Establish network connections between the workers in the cluster
-mod network;
 /// Struct for reporting the health of the network
 pub mod perfstats;
 /// The packet sent out via network
 pub mod packet;
+/// Network module
+pub mod real_network;
+/// Mock network module for the debugging purpose
+pub mod mock_network;
+/// Establish network connections between the workers in the cluster
+mod network;
 
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
-use std::thread::sleep;
-use std::time::Duration;
+use std::sync::mpsc::TryRecvError;
 
 use bufstream::BufStream;
 use serde::ser::Serialize;
 use serde::de::DeserializeOwned;
 
+use mock_network::MockNetwork;
+use real_network::RealNetwork;
 use packet::Packet;
 use perfstats::PerfStats;
 
@@ -67,8 +69,9 @@ const HEAD_NODE: &str = "HEAD_NODE";
 ///     Box::new(move |sender: String, receiver: String, msg: String| {
 ///         let mut t = t.write().unwrap();
 ///         *t = Some(msg.clone());
-///     }
-/// ));
+///     }),
+///     false,
+/// );
 /// sleep(Duration::from_millis(100));  // add waiting in case network is not ready
 ///
 /// // To send out a text message
@@ -80,15 +83,13 @@ const HEAD_NODE: &str = "HEAD_NODE";
 /// sleep(Duration::from_millis(100));
 /// assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 /// ```
-pub struct Network {
-    outbound_put: Sender<(Option<String>, Packet)>,
-    perf_stats: Arc<RwLock<PerfStats>>,
-    heartbeat_interv_secs: Arc<RwLock<u64>>,
-    _send_streams: LockedStream,
+pub enum Network<T: 'static + Serialize + DeserializeOwned> {
+	Real(RealNetwork),
+	Mocked(MockNetwork<T>),
 }
 
 
-impl Network {
+impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
     /// Create a new Network object
     ///
     /// Parameters:
@@ -97,75 +98,25 @@ impl Network {
     ///   `port` has to be the same value for all machines.
     ///   * `remote_ips` - a list of IPs to which this computer makes a connection initially.
     ///   * `callback` - a callback function to be called when a new packet is received
-    pub fn new<T: 'static + DeserializeOwned>(
+    ///   * `debug` - set to true to run in the debugging mode (see MockNetwork)
+    pub fn new(
         port: u16,
         remote_ips: &Vec<String>,
-        mut callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
-    ) -> Network {
-        // start the network
-        let (outbound_put, outbound_pop):
-            (Sender<(Option<String>, Packet)>, Receiver<(Option<String>, Packet)>)
-            = mpsc::channel();
-        let perf_stats = Arc::new(RwLock::new(PerfStats::new()));
-        let ps = perf_stats.clone();
-        let sender_state = network::start_network(
-            remote_ips, port, true, outbound_put.clone(), outbound_pop,
-            Box::new(move |sender_name, receiver_name, packet| {
-                let mut ps = ps.write().unwrap();
-                ps.update(sender_name.clone(), &packet);
-                drop(ps);
-                if packet.is_workload() {
-                    let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
-                    callback(sender_name, receiver_name, content);
-                }
-            }));
-
-        // check if network is ready
-        let send_streams = sender_state.unwrap();
-        loop {
-            let s = send_streams.read().unwrap();
-            if s.len() > 0 {
-                break;
-            }
-            drop(s);
-            sleep(Duration::from_millis(500));
-        }
-
-        // send heart beat signals
-        let heartbeat_interv_secs = Arc::new(RwLock::new(30));
-        let head_ip = HEAD_NODE.to_string();
-        let outbound = outbound_put.clone();
-        let interval = heartbeat_interv_secs.clone();
-        let ps = perf_stats.clone();
-        std::thread::spawn(move|| {
-            loop {
-                let ps = ps.read().unwrap();
-                outbound.send((Some(head_ip.clone()), Packet::get_hb(&ps))).unwrap();
-                drop(ps);
-
-                let interval = interval.read().unwrap();
-                let secs = *interval;
-                drop(interval);
-                sleep(Duration::from_secs(secs));
-            }
-        });
-
-        Network {
-            outbound_put: outbound_put.clone(),
-            perf_stats: perf_stats,
-            heartbeat_interv_secs: heartbeat_interv_secs,
-            _send_streams: send_streams,
+        callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
+        debug: bool,
+    ) -> Network<T> {
+        if debug {
+            Network::Mocked(MockNetwork::new(port, remote_ips, callback))
+        } else {
+            Network::Real(RealNetwork::new(port, remote_ips, callback))
         }
     }
 
     /// Send out a packet
-    pub fn send<T: Serialize>(&self, packet_load: T) -> Result<(), ()> {
-        let safe_json = serde_json::to_string(&packet_load).unwrap();
-        let ret = self.outbound_put.send((None, Packet::new(safe_json)));
-        if ret.is_ok() {
-            Ok(())
-        } else {
-            Err(())
+    pub fn send(&self, packet_load: T) -> Result<(), ()> {
+        match self {
+            Network::Real(network) => network.send(packet_load),
+            Network::Mocked(mocked) => mocked.send(packet_load),
         }
     }
 
@@ -175,14 +126,35 @@ impl Network {
     ///   * hb_interval_secs: the time interval between sending out the heartbeat signals
     ///     (unit: seconds)
     pub fn set_health_parameter(&mut self, hb_interval_secs: u64) {
-        let mut val = self.heartbeat_interv_secs.write().unwrap();
-        *val = hb_interval_secs;
+        match self {
+            Network::Real(network) => network.set_health_parameter(hb_interval_secs),
+            Network::Mocked(_) => {},
+        }
     }
 
     /// Return a summary of the network communication
     pub fn get_health(&self) -> PerfStats {
-        let ps = self.perf_stats.read().unwrap();
-        (*ps).clone()
+        match self {
+            Network::Real(network) => network.get_health(),
+            Network::Mocked(mocked) => mocked._perf_stats.clone(),
+        }
+    }
+
+    pub fn mock_get(&mut self) -> Result<(Option<String>, Packet), TryRecvError> {
+        match self {
+            Network::Real(_) => Err(TryRecvError::Empty),
+            Network::Mocked(mocked) => mocked.mock_get(),
+        }
+    }
+
+
+    pub fn mock_send(
+        &mut self, source: &String, target: &String, packet: T,
+    ) {
+        match self {
+            Network::Real(_) => {},
+            Network::Mocked(mocked) => mocked.mock_send(source, target, packet),
+        }
     }
 }
 
@@ -213,8 +185,9 @@ mod tests {
             Box::new(move |_s: String, _r: String, msg: String| {
                 let mut t = t.write().unwrap();
                 *t = Some(msg.clone());
-            }
-        ));
+            }),
+            false,
+        );
         network.set_health_parameter(1);
         sleep(Duration::from_millis(1000));  // add waiting in case network is not ready
 
@@ -243,8 +216,9 @@ mod tests {
             Box::new(move |_s: String, _r: String, msg: String| {
                 let mut t = t.write().unwrap();
                 *t = Some(msg.clone());
-            }
-        ));
+            }),
+            false,
+        );
         network.set_health_parameter(1);
 
         // To send out a text message
