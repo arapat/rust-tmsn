@@ -112,6 +112,14 @@ impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
         }
     }
 
+    /// Get the list of the address of the subscribed machines
+    pub fn get_subscribers(&mut self) -> Vec<String> {
+        match self {
+            Network::Real(network) => network.get_subscribers(),
+            Network::Mocked(mocked) => mocked.get_subscribers(),
+        }
+    }
+
     /// Send out a packet
     ///
     /// Parameter:
