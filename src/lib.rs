@@ -113,10 +113,14 @@ impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
     }
 
     /// Send out a packet
-    pub fn send(&self, packet_load: T) -> Result<(), ()> {
+    ///
+    /// Parameter:
+    ///     * dest: the address of the destination machine. Set to `None` for broadcasting
+    ///     * packet_load: the workload message to be sent out
+    pub fn send(&self, dest: Option<String>, packet_load: T) -> Result<(), ()> {
         match self {
-            Network::Real(network) => network.send(packet_load),
-            Network::Mocked(mocked) => mocked.send(packet_load),
+            Network::Real(network) => network.send(dest, packet_load),
+            Network::Mocked(mocked) => mocked.send(dest, packet_load),
         }
     }
 

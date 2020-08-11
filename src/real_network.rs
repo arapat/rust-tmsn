@@ -20,7 +20,7 @@ pub struct RealNetwork {
     outbound_put: Sender<(Option<String>, Packet)>,
     perf_stats: Arc<RwLock<PerfStats>>,
     heartbeat_interv_secs: Arc<RwLock<u64>>,
-    _send_streams: LockedStream,
+    send_streams: LockedStream,
 }
 
 
@@ -90,14 +90,22 @@ impl RealNetwork {
             outbound_put: outbound_put.clone(),
             perf_stats: perf_stats,
             heartbeat_interv_secs: heartbeat_interv_secs,
-            _send_streams: send_streams,
+            send_streams: send_streams,
         }
     }
 
+    /// Get the list of the address of the subscribed machines
+    pub fn get_subscribers(&mut self) -> Vec<String> {
+        let streams = self.send_streams.read().unwrap();
+        let subscribers: Vec<String> = streams.iter().map(|(s, _)| s.clone()).collect();
+        drop(streams);
+        subscribers
+    }
+
     /// Send out a packet
-    pub fn send<T: Serialize>(&self, packet_load: T) -> Result<(), ()> {
+    pub fn send<T: Serialize>(&self, dest: Option<String>, packet_load: T) -> Result<(), ()> {
         let safe_json = serde_json::to_string(&packet_load).unwrap();
-        let ret = self.outbound_put.send((None, Packet::new(safe_json)));
+        let ret = self.outbound_put.send((dest, Packet::new(safe_json)));
         if ret.is_ok() {
             Ok(())
         } else {

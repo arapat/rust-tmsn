@@ -37,10 +37,14 @@ impl<T: 'static + Serialize + DeserializeOwned> MockNetwork<T> {
 
     }
 
+    pub fn get_subscribers(&self) -> Vec<String> {
+        vec!["mock".to_string()]
+    }
+
     /// Send out a packet
-    pub fn send(&self, packet_load: T) -> Result<(), ()> {
+    pub fn send(&self, dest: Option<String>, packet_load: T) -> Result<(), ()> {
         let safe_json = serde_json::to_string(&packet_load).unwrap();
-        let ret = self.outbound_put.send((None, Packet::new(safe_json)));
+        let ret = self.outbound_put.send((dest, Packet::new(safe_json)));
         if ret.is_ok() {
             Ok(())
         } else {
