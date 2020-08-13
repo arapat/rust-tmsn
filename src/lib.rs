@@ -83,13 +83,13 @@ const HEAD_NODE: &str = "HEAD_NODE";
 /// sleep(Duration::from_millis(100));
 /// assert_eq!(*(output.read().unwrap()), Some(String::from(MESSAGE)));
 /// ```
-pub enum Network<T: 'static + Serialize + DeserializeOwned> {
+pub enum Network {
 	Real(RealNetwork),
-	Mocked(MockNetwork<T>),
+	Mocked(MockNetwork),
 }
 
 
-impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
+impl Network {
     /// Create a new Network object
     ///
     /// Parameters:
@@ -99,12 +99,12 @@ impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
     ///   * `remote_ips` - a list of IPs to which this computer makes a connection initially.
     ///   * `callback` - a callback function to be called when a new packet is received
     ///   * `debug` - set to true to run in the debugging mode (see MockNetwork)
-    pub fn new(
+    pub fn new<T: 'static + DeserializeOwned>(
         port: u16,
         remote_ips: &Vec<String>,
         callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
         debug: bool,
-    ) -> Network<T> {
+    ) -> Network {
         if debug {
             Network::Mocked(MockNetwork::new(port, remote_ips, callback))
         } else {
@@ -125,7 +125,7 @@ impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
     /// Parameter:
     ///     * dest: the address of the destination machine. Set to `None` for broadcasting
     ///     * packet_load: the workload message to be sent out
-    pub fn send(&self, dest: Option<String>, packet_load: T) -> Result<(), ()> {
+    pub fn send<T: Serialize>(&self, dest: Option<String>, packet_load: T) -> Result<(), ()> {
         match self {
             Network::Real(network) => network.send(dest, packet_load),
             Network::Mocked(mocked) => mocked.send(dest, packet_load),
@@ -160,9 +160,7 @@ impl<T: 'static + Serialize + DeserializeOwned> Network<T> {
     }
 
 
-    pub fn mock_send(
-        &mut self, source: &String, target: &String, packet: T,
-    ) {
+    pub fn mock_send(&mut self, source: &String, target: &String, packet: Option<String>) {
         match self {
             Network::Real(_) => {},
             Network::Mocked(mocked) => mocked.mock_send(source, target, packet),
