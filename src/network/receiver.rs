@@ -82,7 +82,7 @@ pub fn receiver(
             } else {
                 let (sender_name, receiver_name, remote_idx, mut packet): JsonFormat =
                     remote_packet.unwrap();
-                debug!("message-received, {}, {}, {}, {}, {}",
+                trace!("message-received, {}, {}, {}, {}, {}",
                        idx, sender_name, remote_idx, remote_ip, json.len());
                 packet.mark_received();
                 let f = &mut *(callback.write().unwrap());
