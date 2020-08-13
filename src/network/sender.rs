@@ -124,7 +124,7 @@ fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<Stri
             error!("Network module cannot receive the local model. Error: {}", err);
             continue;
         }
-        debug!("network-to-send-out, {}, {}", local_addr, idx);
+        trace!("network-to-send-out, {}, {}", local_addr, idx);
 
         let (remote_ip, data) = data.unwrap();
         let remote_ip = if remote_ip.is_some() {
@@ -163,7 +163,7 @@ fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<Stri
                 sent_out
             }
         };
-        debug!("network-sent-out, {}, {}, {}", local_addr, idx, num_computers);
+        trace!("network-sent-out, {}, {}, {}", local_addr, idx, num_computers);
         idx += 1;
     }
 }
