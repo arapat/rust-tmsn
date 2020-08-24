@@ -36,7 +36,9 @@ pub fn start_receiver(
                 receivers.insert(remote_addr.clone());
                 spawn(move || {
                     let mut tcp_stream = None;
-                    while tcp_stream.is_none() {
+                    let mut attempt = 0;
+                    while tcp_stream.is_none() && attempt < 3 {
+                        attempt += 1;
                         tcp_stream = match TcpStream::connect(remote_addr) {
                             Ok(_tcp_stream) => Some(_tcp_stream),
                             Err(error) => {
@@ -47,8 +49,12 @@ pub fn start_receiver(
                             }
                         };
                     }
-                    let stream = BufStream::new(tcp_stream.unwrap());
-                    receiver(addr, stream, outbound, callback);
+                    if tcp_stream.is_some() {
+                        let stream = BufStream::new(tcp_stream.unwrap());
+                        receiver(addr, stream, outbound, callback);
+                    } else {
+                        info!("Failed to connect to remote address {}. Quit.", remote_addr);
+                    }
                 });
             } else {
                 info!("(Skipped) Receiver exists for {}", remote_addr);

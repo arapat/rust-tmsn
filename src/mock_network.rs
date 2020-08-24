@@ -16,7 +16,7 @@ use perfstats::PerfStats;
 pub struct MockNetwork {
     outbound_put: Sender<(Option<String>, Packet)>,
     outbound_get: Receiver<(Option<String>, Packet)>,
-    callback: Box<dyn FnMut(String, String, Option<String>) + Sync + Send>,
+    callback: Box<dyn FnMut(String, String, Packet) + Sync + Send>,
     pub _perf_stats: PerfStats,
 }
 
@@ -28,10 +28,10 @@ impl MockNetwork {
         mut callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
     ) -> MockNetwork {
         let (outbound_put, outbound_get) = channel();
-        let callback: Box<dyn FnMut(String, String, Option<String>) + Sync + Send> =
-            Box::new(move |sender_name, receiver_name, packet_content| {
-                if packet_content.is_some() {
-                    let content: T = serde_json::from_str(&packet_content.unwrap()).unwrap();
+        let callback: Box<dyn FnMut(String, String, Packet) + Sync + Send> =
+            Box::new(move |sender_name, receiver_name, packet| {
+                if packet.is_workload() {
+                    let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
                     callback(sender_name, receiver_name, content);
                 }
             });
@@ -64,7 +64,8 @@ impl MockNetwork {
     }
 
     /// Send a packet to the application
-    pub fn mock_send(&mut self, source: &String, target: &String, packet: Option<String>) {
-        (self.callback)(source.clone(), target.clone(), packet)
+    pub fn mock_send<T: Serialize>(&mut self, source: &String, target: &String, packet_load: T) {
+        let safe_json = serde_json::to_string(&packet_load).unwrap();
+        (self.callback)(source.clone(), target.clone(), Packet::new(safe_json));
     }
 }
