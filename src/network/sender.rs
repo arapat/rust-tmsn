@@ -99,8 +99,11 @@ fn income_conn_listener(
         };
     }
     let streams = sender_streams.clone();
+    let addr_port: String = local_addr.unwrap().to_string();
+    let addr_port: Vec<&str> = addr_port.splitn(2, ':').collect();
+    let local_addr = addr_port[0].to_string();
     spawn(move|| {
-        sender(local_addr.unwrap().to_string(), streams, packet_recv);
+        sender(local_addr, streams, packet_recv);
     });
 
     info!("Entering sender listening mode");
@@ -115,7 +118,7 @@ fn income_conn_listener(
 
 // Core sender routine - 1 to many
 fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<String>, Packet)>) {
-    info!("1-to-many Sender has started.");
+    info!("1-to-many Sender has started, {}.", local_addr);
 
     let mut idx = 0;
     loop {
