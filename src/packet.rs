@@ -4,7 +4,7 @@ use PerfStats;
 
 
 // local machine name, Packet index, packet
-pub type JsonFormat = (String, String, u32, Packet);
+pub type JsonFormat = (u32, Packet);
 
 /// Types of packets
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -21,7 +21,7 @@ pub enum PacketType {
 
 
 /// Packet 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packet {
     /// Actual workload of the packet
     pub content: Option<String>,

@@ -66,7 +66,7 @@ const HEAD_NODE: &str = "HEAD_NODE";
 /// let t = output.clone();
 /// let network = Network::new(
 ///     8080, &neighbors,
-///     Box::new(move |sender: String, receiver: String, msg: String| {
+///     Box::new(move |sender: String, msg: String| {
 ///         let mut t = t.write().unwrap();
 ///         *t = Some(msg.clone());
 ///     }),
@@ -76,7 +76,7 @@ const HEAD_NODE: &str = "HEAD_NODE";
 ///
 /// // To send out a text message
 /// let message = String::from(MESSAGE);
-/// network.send(message.clone()).unwrap();
+/// network.send(None, message.clone()).unwrap();
 ///
 /// // The message above is supposed to send out to all the neighbors computers specified
 /// // in the `network` vector, which contains only the localhost.
@@ -102,7 +102,7 @@ impl Network {
     pub fn new<T: 'static + DeserializeOwned>(
         port: u16,
         remote_ips: &Vec<String>,
-        callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
+        callback: Box<dyn FnMut(String, T) + Sync + Send>,
         debug: bool,
     ) -> Network {
         if debug {
@@ -160,10 +160,10 @@ impl Network {
     }
 
 
-    pub fn mock_send(&mut self, source: &String, target: &String, packet: Option<String>) {
+    pub fn mock_send(&mut self, source: &String, packet: Option<String>) {
         match self {
             Network::Real(_) => {},
-            Network::Mocked(mocked) => mocked.mock_send(source, target, packet),
+            Network::Mocked(mocked) => mocked.mock_send(source, packet),
         }
     }
 }
@@ -192,7 +192,7 @@ mod tests {
         let t = output.clone();
         let mut network = Network::new(
             port, &neighbors,
-            Box::new(move |_s: String, _r: String, msg: String| {
+            Box::new(move |_s: String, msg: String| {
                 let mut t = t.write().unwrap();
                 *t = Some(msg.clone());
             }),
@@ -203,7 +203,7 @@ mod tests {
 
         // To send out a text message
         let message = String::from(MESSAGE);
-        network.send(message.clone()).unwrap();
+        network.send(None, message.clone()).unwrap();
 
         // The message above is supposed to send out to all the neighbors computers specified
         // in the `network` vector, which contains only the localhost.
@@ -223,7 +223,7 @@ mod tests {
         let output: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let t = output.clone();
         let mut network = Network::new(port, &neighbors,
-            Box::new(move |_s: String, _r: String, msg: String| {
+            Box::new(move |_s: String, msg: String| {
                 let mut t = t.write().unwrap();
                 *t = Some(msg.clone());
             }),
@@ -240,7 +240,7 @@ mod tests {
         // only scanners send out packets
         if neighbors.len() == 0 {
             for _ in 0..100 {
-                network.send(message.clone()).unwrap();
+                network.send(None, message.clone()).unwrap();
                 sleep(Duration::from_millis(pkg_interval));
             }
         } else {

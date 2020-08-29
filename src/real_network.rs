@@ -36,7 +36,7 @@ impl RealNetwork {
     pub fn new<T: 'static + DeserializeOwned>(
         port: u16,
         remote_ips: &Vec<String>,
-        mut callback: Box<dyn FnMut(String, String, T) + Sync + Send>,
+        mut callback: Box<dyn FnMut(String, T) + Sync + Send>,
     ) -> RealNetwork {
         // start the network
         let (outbound_put, outbound_pop):
@@ -46,13 +46,13 @@ impl RealNetwork {
         let ps = perf_stats.clone();
         let sender_state = network::start_network(
             remote_ips, port, true, outbound_put.clone(), outbound_pop,
-            Box::new(move |sender_name, receiver_name, packet| {
+            Box::new(move |sender_name, packet| {
                 let mut ps = ps.write().unwrap();
                 ps.update(sender_name.clone(), &packet);
                 drop(ps);
                 if packet.is_workload() {
                     let content: T = serde_json::from_str(&packet.content.unwrap()).unwrap();
-                    callback(sender_name, receiver_name, content);
+                    callback(sender_name, content);
                 }
             }));
 

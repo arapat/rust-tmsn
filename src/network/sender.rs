@@ -65,14 +65,10 @@ fn income_conn_listener(
         let mut lock_w = sender_streams.write().expect(
             "Failed to obtain the lock for expanding sender_streams."
         );
-        let remote_addr_str = {
-            let s = remote_addr.to_string();
-            let r: Vec<&str> = s.splitn(2, ':').collect();
-            r[0].to_string()
-        };
-        lock_w.push((remote_addr_str, BufStream::new(stream)));
+        let remote_addr_str = remote_addr.ip().to_string();
+        lock_w.push((remote_addr_str.clone(), BufStream::new(stream)));
         drop(lock_w);
-        info!("Remote server {} will receive our model from now on.", remote_addr);
+        info!("Remote server {} will receive our model from now on.", remote_addr_str);
         // subscribe to the remote machine
         if let Some(ref receivers) = receiver_ips {
             receivers.send(remote_addr.clone()).expect(
@@ -99,9 +95,7 @@ fn income_conn_listener(
         };
     }
     let streams = sender_streams.clone();
-    let addr_port: String = local_addr.unwrap().to_string();
-    let addr_port: Vec<&str> = addr_port.splitn(2, ':').collect();
-    let local_addr = addr_port[0].to_string();
+    let local_addr = local_addr.unwrap().ip().to_string();
     spawn(move|| {
         sender(local_addr, streams, packet_recv);
     });
@@ -130,13 +124,6 @@ fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<Stri
         trace!("network-to-send-out, {}, {}", local_addr, idx);
 
         let (remote_ip, data) = data.unwrap();
-        let remote_ip = if remote_ip.is_some() {
-            let remote_ip = remote_ip.unwrap();
-            let r: Vec<&str> = remote_ip.splitn(2, ':').collect();
-            Some(r[0].to_string())
-        } else {
-            None
-        };
         let num_computers = {
             let streams = streams.write();
             if let Err(err) = streams {
@@ -150,8 +137,7 @@ fn sender(local_addr: String, streams: LockedStream, chan: Receiver<(Option<Stri
                         (index != 0 || remote_ip.as_ref().unwrap() != &HEAD_NODE.to_string()) {
                         return;
                     }
-                    let packet_load: JsonFormat =
-                        (local_addr.clone(), remote_addr.clone(), idx, data.clone());
+                    let packet_load: JsonFormat = (idx, data.clone());
                     let json = serde_json::to_string(&packet_load).unwrap();
                     if let Err(err) = stream.write_fmt(format_args!("{}\n", json)) {
                         error!("Cannot write into one of the streams. Error: {}", err);
