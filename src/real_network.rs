@@ -60,7 +60,7 @@ impl RealNetwork {
         let send_streams = sender_state.unwrap();
         loop {
             let s = send_streams.read().unwrap();
-            if s.len() > 0 {
+            if s.len() == remote_ips.len() {
                 break;
             }
             drop(s);
