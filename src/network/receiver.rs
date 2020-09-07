@@ -42,9 +42,9 @@ pub fn start_receiver(
                         tcp_stream = match TcpStream::connect(remote_addr) {
                             Ok(_tcp_stream) => Some(_tcp_stream),
                             Err(error) => {
-                                info!("(retry in 2 secs) Error: {}.
+                                info!("(retry in 10 secs) Error: {}.
                                     Failed to connect to remote address {}", error, remote_addr);
-                                sleep(Duration::from_secs(2));
+                                sleep(Duration::from_secs(10));
                                 None
                             }
                         };
